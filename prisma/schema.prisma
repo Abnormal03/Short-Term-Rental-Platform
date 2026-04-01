@@ -1,0 +1,128 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+  // output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  user_id            String               @id @default(uuid())
+  Clerk_id           String               @unique
+  name               String
+  email              String               @unique
+  Role               Role                 @default(GUEST)
+  phone_number       String               @unique
+  is_verified_host   Boolean              @default(false)
+  payment_preference PaymentPreference    @default(TELEBIRR)
+  create_at          DateTime             @default(now())
+  updated_at         DateTime             @updatedAt
+  properties         Property[]
+  bookings           Booking[]
+  languagePreference Language_preference?
+}
+
+enum PaymentPreference {
+  TELEBIRR
+  MPESA
+  CBEBIRR
+}
+
+enum Role {
+  GUEST
+  HOST
+  ADMIN
+}
+
+model Property {
+  property_id         String             @id @default(uuid())
+  title               String
+  description         String
+  city                String
+  country             String
+  price_per_night     Float
+  min_stay_duration   Int
+  max_stay_duration   Int
+  verification_status VerificationStatus @default(PENDING)
+  host_id             String
+  owner               User               @relation(fields: [owner_id], references: [user_id])
+  owner_id            String
+  create_at           DateTime           @default(now())
+  updated_at          DateTime           @updatedAt
+  propertyImages      PropertyImage[]
+  bookings            Booking[]
+  availabilities      Availability?
+}
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model PropertyImage {
+  image_id    String   @id @default(uuid())
+  property_id String
+  image_url   String
+  property    Property @relation(fields: [property_id], references: [property_id])
+  uploaded_at DateTime @default(now())
+}
+
+model Booking {
+  booking_id     String        @id @default(uuid())
+  user_id        String
+  property_id    String
+  user           User          @relation(fields: [user_id], references: [user_id])
+  property       Property      @relation(fields: [property_id], references: [property_id])
+  check_in_date  DateTime
+  check_out_date DateTime
+  total_price    Float
+  booking_status BookingStatus @default(PENDING)
+  created_at     DateTime      @default(now())
+  payment        Payment?
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+model Payment {
+  payment_id            String        @id @default(uuid())
+  booking_id            String        @unique
+  amount                Float
+  payment_method        String
+  payment_status        PaymentStatus @default(PENDING)
+  transaction_reference String
+  created_at            DateTime      @default(now())
+  booking               Booking       @relation(fields: [booking_id], references: [booking_id])
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+model Availability {
+  availability_id String   @id @default(uuid())
+  property_id     String   @unique
+  available_from  DateTime
+  available_to    DateTime
+  property        Property @relation(fields: [property_id], references: [property_id])
+}
+
+model Language_preference {
+  language_id   String @id @default(uuid())
+  user_id       String @unique
+  language_code String
+  user          User   @relation(fields: [user_id], references: [user_id])
+}
