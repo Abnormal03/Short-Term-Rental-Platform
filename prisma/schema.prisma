@@ -18,7 +18,7 @@ model User {
   name               String
   email              String               @unique
   Role               Role                 @default(GUEST)
-  phone_number       String               @unique
+  phone_number       String?              @unique
   is_verified_host   Boolean              @default(false)
   payment_preference PaymentPreference    @default(TELEBIRR)
   create_at          DateTime             @default(now())
@@ -50,11 +50,11 @@ model Property {
   min_stay_duration   Int
   max_stay_duration   Int
   verification_status VerificationStatus @default(PENDING)
+  host                User               @relation(fields: [host_id], references: [user_id])
   host_id             String
-  owner               User               @relation(fields: [owner_id], references: [user_id])
-  owner_id            String
   create_at           DateTime           @default(now())
   updated_at          DateTime           @updatedAt
+  deleted_at          DateTime?
   propertyImages      PropertyImage[]
   bookings            Booking[]
   availabilities      Availability?
@@ -101,12 +101,30 @@ model Payment {
   amount                Float
   payment_method        String
   payment_status        PaymentStatus @default(PENDING)
-  transaction_reference String
+  transaction_reference String?
   created_at            DateTime      @default(now())
   booking               Booking       @relation(fields: [booking_id], references: [booking_id])
+  refund                Refund?
 }
 
 enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+model Refund {
+  refund_id             String       @id @default(uuid())
+  payment_id            String       @unique
+  amount                Float
+  reason                String?
+  refund_status         RefundStatus @default(PENDING)
+  transaction_reference String?
+  created_at            DateTime     @default(now())
+  payment               Payment      @relation(fields: [payment_id], references: [payment_id])
+}
+
+enum RefundStatus {
   PENDING
   COMPLETED
   FAILED

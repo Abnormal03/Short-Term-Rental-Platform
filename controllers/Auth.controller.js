@@ -38,15 +38,14 @@ const syncUser = async (req, res) => {
     const eventType = evt.type;
 
     //sync the user of clerk to my database...
-
     try {
 
-        if (eventType.type === "user.created" || eventType.type === "user.updated") {
+        if (eventType === "user.created" || eventType === "user.updated") {
             console.log('here...')
             await createUser(evt.data);
         }
 
-        if (eventType.type === "user.deleted") {
+        if (eventType === "user.deleted") {
             await deleteUser(id);
         }
 

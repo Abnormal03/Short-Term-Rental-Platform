@@ -2,12 +2,13 @@ const prisma = require('../config/db');
 
 const createUser = async (user) => {
     try {
+
         await prisma.user.upsert({
             where: {
                 Clerk_id: user.id
             },
             update: {
-                name: user.name,
+                name: user.first_name ? `${user.first_name} ${user.last_name || ''}` : "Unknown",
                 phone_number: user.phone_numbers?.[0]?.phone_number,
             },
             create: {
@@ -18,6 +19,7 @@ const createUser = async (user) => {
                 Role: "GUEST"
             },
         })
+        console.log('user successfully created.')
 
     } catch (error) {
         console.log(error)
@@ -36,6 +38,8 @@ const deleteUser = async (clerkId) => {
         if (!deleted) {
             throw new Error('unable to delete user.');
         }
+
+        console.log('user deleted successully!')
     } catch (error) {
         console.log(error);
         throw new Error('unable to delete user.');
