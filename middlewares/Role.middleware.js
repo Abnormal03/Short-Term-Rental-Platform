@@ -11,7 +11,8 @@ const verifyRole = (Role) => {
                     Clerk_id: userId
                 }
             })
-            if (user.Role !== Role) {
+            const authorized = Role.some((role) => role === user.Role)
+            if (!authorized) {
                 return res.status(403).json({ message: "unauthorized access!" })
             }
             next();

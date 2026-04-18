@@ -4,7 +4,8 @@ const express = require('express');
 const { clerkMiddleware, requireAuth } = require('@clerk/express');
 const { syncUser } = require('./controllers/Auth.controller');
 
-const propertyRoute = require('./routes/Properties.route');
+const propertyRoutes = require('./routes/Properties.route');
+const bookingRoutes = require('./routes/Booking.route');
 
 const app = express();
 
@@ -13,7 +14,12 @@ app.use(clerkMiddleware())
 app.post('/webhooks/clerk', express.raw({ type: "application/json" }), syncUser);
 
 app.use(express.json())
-app.use('/api/v1/properties', requireAuth(), propertyRoute)
+
+//properties route...
+app.use('/api/v1/properties', requireAuth(), propertyRoutes);
+
+//booking route...
+app.use('/api/v1/bookings', requireAuth(), bookingRoutes)
 
 //testing purpose....
 app.get('/', requireAuth(), (req, res) => {
