@@ -41,7 +41,6 @@ const syncUser = async (req, res) => {
     try {
 
         if (eventType === "user.created" || eventType === "user.updated") {
-            console.log('here...')
             await createUser(evt.data);
         }
 
