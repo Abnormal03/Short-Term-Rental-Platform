@@ -28,8 +28,8 @@ const getAllProperties = async () => {
 
         return properties;
     } catch (error) {
-        console.log(error);
-        throw new Error('unable to get products')
+        console.log(error.message);
+        throw new Error(error.message || 'unable to get products')
     }
 }
 
@@ -50,8 +50,8 @@ const getUserProperty = async (id) => {
 
         return properties;
     } catch (error) {
-        console.log(error);
-        throw new Error('unable to get products');
+        console.log(error.message);
+        throw new Error(error.message || 'unable to get products');
     }
 }
 
@@ -88,8 +88,8 @@ const addNewProperty = async (property, userId) => {
             throw new Error('something went wrong while creating property!');
         }
     } catch (error) {
-        console.log(error);
-        throw new Error('unable to create Propduct!');
+        console.log(error.message);
+        throw new Error(error.message || 'unable to create Propduct!');
     }
 }
 
@@ -109,8 +109,8 @@ const getunverifiedProperty = async () => {
 
         return properties;
     } catch (error) {
-        console.log(error);
-        throw new Error('unable to create Propduct!');
+        console.log(error.message);
+        throw new Error(error.message || 'unable to create Propduct!');
     }
 }
 
@@ -183,8 +183,8 @@ const deleteUserProperty = async (hostId, id) => {
             return deletedProperty;
         })
     } catch (error) {
-        console.log(error);
-        throw new Error('Failed to deleted property.');
+        console.log(error.message);
+        throw new Error(error.message || 'Failed to deleted property.');
     }
 }
 
@@ -214,10 +214,100 @@ const deletedProperties = async () => {
         }
         return null;
     } catch (error) {
-        console.log(error);
-        throw new Error('Failed to fetch deleted properties.');
+        console.log(error.message);
+        throw new Error(error.message || 'Failed to fetch deleted properties.');
     }
 }
 
 
-module.exports = { getAllProperties, getUserProperty, addNewProperty, getunverifiedProperty, deleteUserProperty, deletedProperties };
+const propertyUpdate = async (propertyId, clerkId, property) => {
+
+    if (property.property_images.length >= 1) {
+        property.property_images = property.property_images.map(image => ({
+            image_url: image
+        }))
+    }
+    try {
+        return await prisma.$transaction(async (tx) => {
+            // get the user...
+            const user = await tx.user.findFirst({
+                where: {
+                    Clerk_id: clerkId
+                }
+            })
+
+            const formerProperty = await tx.property.findFirst({
+                where: {
+                    property_id: propertyId,
+                    host_id: user.user_id
+                },
+                include: {
+                    propertyImages: {
+                        select: {
+                            image_id: true
+                        }
+                    }
+                }
+            })
+
+            const updatedProperty = await tx.property.update({
+                where: {
+                    property_id: propertyId,
+                    host_id: user.user_id
+                },
+                data: {
+                    title: property.title,
+                    description: property.description,
+                    city: property.city,
+                    country: property.country,
+                    price_per_night: property.price_per_night,
+                    min_stay_duration: property.min_stay_duration,
+                    max_stay_duration: property.max_stay_duration,
+                    host_id: user.user_id,
+                    propertyImages: {
+                        deleteMany: {},
+                        createMany: {
+                            data: property.property_images
+                        }
+                    }
+                },
+                include: {
+                    propertyImages: true
+                }
+            })
+            if (!updatedProperty) {
+                throw new Error('Property not found.')
+            }
+
+            return updatedProperty;
+        })
+    } catch (error) {
+        console.log(error.message);
+        throw new Error(error.message || "Unable to update Property.")
+    }
+}
+
+const approveProp = async (propertyId, approved) => {
+    try {
+        const approvedProperty = await prisma.property.update({
+            where: {
+                property_id: propertyId
+            },
+            data: {
+                verification_status: approved ? "APPROVED" : "REJECTED"
+            }
+        })
+
+        if (approvedProperty) {
+            return approvedProperty;
+        }
+
+        throw new Error('Unable to updated property.');
+    } catch (error) {
+        console.log(error.message);
+        throw new Error(error.message || "Failed to update property.");
+    }
+}
+
+
+module.exports = { getAllProperties, getUserProperty, addNewProperty, getunverifiedProperty, deleteUserProperty, deletedProperties, propertyUpdate, approveProp };

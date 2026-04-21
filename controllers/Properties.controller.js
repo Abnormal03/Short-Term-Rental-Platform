@@ -1,6 +1,6 @@
 const { getAuth } = require('@clerk/express')
 
-const { getAllProperties, getUserProperty, addNewProperty, getunverifiedProperty, deleteUserProperty, deletedProperties } = require("../services/Properties.service");
+const { getAllProperties, getUserProperty, addNewProperty, getunverifiedProperty, deleteUserProperty, deletedProperties, propertyUpdate, approveProp } = require("../services/Properties.service");
 
 
 const getProperties = async (req, res) => {
@@ -94,4 +94,39 @@ const getDeletedProperties = async (req, res) => {
         return res.status(500).json({ message: error.message })
     }
 }
-module.exports = { getProperties, getUserProperties, createProperty, getUnverifiedProperties, deleteProperty, getDeletedProperties }
+
+const updateProperty = async (req, res) => {
+    try {
+        const { userId } = getAuth(req);
+        const property = req.body;
+        const { propertyId } = req.params;
+        const updatedProperty = await propertyUpdate(propertyId, userId, property)
+
+        if (!updatedProperty) {
+            return res.status(400).json({ message: 'Failed to Updated Property.' })
+        }
+
+        return res.status(200).json({ updatedProperty: updatedProperty })
+    } catch (error) {
+        return res.status(500).json({ message: error.message })
+    }
+}
+
+// approve or reject property....
+const approveProperty = async (req, res) => {
+    try {
+        const { propertyId } = req.params;
+        const { approved } = req.body;
+
+        const approvedProperty = await approveProp(propertyId, approved);
+
+        if (!approvedProperty) {
+            return res.status(400).json({ message: 'Failed to updated Property.' });
+        }
+
+        return res.status(200).json({ approvedProperty: approvedProperty })
+    } catch (error) {
+        return res.status(500).json({ message: error.message })
+    }
+}
+module.exports = { getProperties, getUserProperties, createProperty, getUnverifiedProperties, deleteProperty, getDeletedProperties, updateProperty, approveProperty }
