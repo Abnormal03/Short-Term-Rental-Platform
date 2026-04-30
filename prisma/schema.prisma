@@ -101,7 +101,7 @@ model Payment {
   amount                Float
   payment_method        String
   payment_status        PaymentStatus @default(PENDING)
-  transaction_reference String?
+  transaction_reference String?       @unique
   created_at            DateTime      @default(now())
   booking               Booking       @relation(fields: [booking_id], references: [booking_id])
   refund                Refund?

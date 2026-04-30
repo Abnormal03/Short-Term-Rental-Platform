@@ -1,12 +1,13 @@
-const { createBooking, cancelBook, propertyBookings, paymentSuccessfulFail } = require("../services/Booking.service")
+const { createBooking, cancelBook, propertyBookings, paymentSuccessfulFail, attachTransactionRef } = require("../services/Booking.service")
 const { getAuth } = require('@clerk/express');
+const { initializePayment } = require("../services/Chapa.service");
 
 const addBooking = async (req, res) => {
     try {
         const { propertyId } = req.params;
         const { userId } = getAuth(req);
-        const booking = req.body;
-        if (!booking || !booking.checkInDate || !booking.checkOutDate || !booking.totalPrice || !booking.paymentMethod) {
+        const { booking, paymentDetail } = req.body;
+        if (!booking || !booking.checkInDate || !booking.checkOutDate || !booking.totalPrice || !booking.paymentMethod || !paymentDetail) {
             return res.status(400).json({ message: 'Full information is required.' })
         }
 
@@ -15,7 +16,17 @@ const addBooking = async (req, res) => {
         if (!NewBooking) {
             return res.status(400).json({ message: 'Unable to book property.' })
         }
-        return res.status(200).json({ booking: NewBooking });
+        //initialize payment..
+        const initialize = await initializePayment(paymentDetail);
+
+        //if payment fails, fail both booking and payment
+        if (!initialize.success) {
+            await paymentSuccessfulFail(NewBooking.booking_id, 'unsuccessful', false);
+            throw new Error(initialize.message || 'Payment Failed.');
+        }
+        const paymentUpdated = await attachTransactionRef(NewBooking.booking_id, NewBooking.payment.payment_id, initialize.tx_ref)
+
+        return res.status(200).json({ booking: paymentUpdated, checkout_url: initialize.checkout_url });
     } catch (error) {
         return res.status(500).json({ message: error.message })
     }
@@ -25,9 +36,9 @@ const addBooking = async (req, res) => {
 const cancelBooking = async (req, res) => {
     try {
         const { bookingId } = req.params;
-        const reason = req.body ? req.body : null
+        const body = req.body ? req.body : null
 
-        const canceledBooking = await cancelBook(bookingId, reason)
+        const canceledBooking = await cancelBook(bookingId, body.reason || null)
 
         if (canceledBooking) {
             return res.status(200).json({ canceledBooking: canceledBooking })

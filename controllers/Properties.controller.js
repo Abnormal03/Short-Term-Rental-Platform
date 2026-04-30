@@ -98,12 +98,17 @@ const getDeletedProperties = async (req, res) => {
 const updateProperty = async (req, res) => {
     try {
         const { userId } = getAuth(req);
-        const property = req.body;
         const { propertyId } = req.params;
+        const { title, description, city, country, price_per_night, min_stay_duration, max_stay_duration, property_images } = req.body;
+
+        const property = {
+            title, description, city, country, price_per_night, min_stay_duration, max_stay_duration, property_images
+        };
+
         const updatedProperty = await propertyUpdate(propertyId, userId, property)
 
         if (!updatedProperty) {
-            return res.status(400).json({ message: 'Failed to Updated Property.' })
+            return res.status(400).json({ message: 'Failed to update property.' })
         }
 
         return res.status(200).json({ updatedProperty: updatedProperty })

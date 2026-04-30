@@ -18,7 +18,7 @@ const verifyRole = (Role) => {
             next();
         } catch (error) {
             console.log(error)
-            return res.status(403).json({ message: "unable to propcess user!" })
+            return res.status(403).json({ message: "unable to process user!" })
         }
     }
 }

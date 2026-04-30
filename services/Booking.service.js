@@ -1,5 +1,7 @@
 const prisma = require("../config/db");
 
+const { refund: chapaRefund } = require('./Chapa.service')
+
 const createBooking = async (booking, clerkId, propertyId) => {
     try {
         return await prisma.$transaction(async (tx) => {
@@ -61,7 +63,6 @@ const createBooking = async (booking, clerkId, propertyId) => {
                     user_id: user.user_id,
                     check_in_date: checkIn,
                     check_out_date: checkOut,
-                    booking_status: 'PENDING',
                     total_price: booking.totalPrice,
                     payment: {
                         create: {
@@ -69,6 +70,9 @@ const createBooking = async (booking, clerkId, propertyId) => {
                             amount: booking.totalPrice
                         }
                     }
+                },
+                include: {
+                    payment: true
                 }
             });
         });
@@ -80,58 +84,93 @@ const createBooking = async (booking, clerkId, propertyId) => {
 
 const cancelBook = async (bookingId, reason) => {
     try {
-        return await prisma.$transaction(async (tx) => {
-            //check if it is valid for refund or not...
-            const booking = await tx.booking.findFirst({
-                where: {
-                    booking_id: bookingId,
-                    payment: {
-                        payment_status: "COMPLETED"
-                    },
-                    booking_status: {
-                        notIn: ["CANCELLED", "COMPLETED",]
-                    },
+        //fetch booking...
+        const booking = await prisma.booking.findFirst({
+            where: {
+                booking_id: bookingId,
+                payment: {
+                    payment_status: {
+                        not: "FAILED"
+                    }
                 },
-                include: {
-                    payment: true,
+                booking_status: {
+                    notIn: ['CANCELLED', 'COMPLETED']
                 }
-            })
-            console.log(booking)
-
-            if (!booking) {
-                throw new Error('Unable to cancel Booking.')
+            },
+            include: {
+                payment: true
             }
-            console.log(booking)
-            //check if it is less than 24hr after booking...
-            const illegible = (new Date(booking.created_at) - new Date()) / (1000 * 60 * 60) <= 24
+        })
 
-            // refund the money back if illigable...
-            if (illegible) {
-                const refund = await tx.refund.create({
+        if (!booking) {
+            throw new Error('Unable to find Booking.')
+        }
+
+        // check Elligable...
+        const hoursSinceBooking = (new Date() - new Date(booking.created_at)) / (1000 * 60 ^ 60);
+        const isElligible = hoursSinceBooking <= 24;
+
+        // refund in chapa if illigable...
+        let refundDetail;
+        if (isElligible && booking.payment.payment_status === 'COMPLETED') {
+            refundDetail = await chapaRefund(booking.payment.transaction_reference);
+
+            if (!refundDetail.success) {
+                throw new Error('Enable to Refund Transaction.')
+            }
+        }
+
+        const result = await prisma.$transaction(async (tx) => {
+            // create refund if elligable...
+            if (isElligible) {
+                await tx.payment.update({
+                    where: {
+                        payment_id: booking.payment.payment_id
+                    },
                     data: {
-                        payment_id: booking.payment.payment_id,
-                        reason: reason,
-                        refund_status: "COMPLETED",
-                        amount: booking.total_price
+                        payment_status: "FAILED"
                     }
                 })
             }
 
-            // cancel the booking...
-            const canceledBooking = await tx.booking.update({
+            if (refundDetail && refundDetail.success) {
+                await tx.refund.create({
+                    data: {
+                        payment_id: booking.payment.payment_id,
+                        reason: reason,
+                        refund_status: "COMPLETED",
+                        amount: booking.total_price,
+                        transaction_reference: refundResult.reference // 👈 use chapa ref
+                    }
+                });
+            }
+
+            // cancel booking...
+            const cancelBooking = await tx.booking.update({
                 where: {
-                    booking_id: bookingId
+                    booking_id: booking.booking_id
                 },
                 data: {
-                    booking_status: "CANCELLED"
+                    booking_status: 'CANCELLED'
+                },
+                include: {
+                    payment: {
+                        include: {
+                            refund: true
+                        }
+                    }
                 }
             })
 
-            return canceledBooking;
+
+            return cancelBooking;
         })
+
+        return result;
+
     } catch (error) {
-        console.log(error.message);
-        throw new Error(error.message || "Unable to cancel booking.")
+        console.log("Cancel Booking Error:", error.message);
+        throw new Error(error.message || "Unable to cancel booking.");
     }
 }
 
@@ -185,4 +224,34 @@ const paymentSuccessfulFail = async (bookingId, success) => {
     }
 }
 
-module.exports = { createBooking, cancelBook, propertyBookings, paymentSuccessfulFail };
+
+const attachTransactionRef = async (bookingId, paymentId, tx_ref) => {
+    try {
+        const paymentUpdated = await prisma.booking.update({
+            where: {
+                booking_id: bookingId
+            },
+            data: {
+                payment: {
+                    update: {
+                        where: {
+                            payment_id: paymentId
+                        },
+                        data: {
+                            transaction_reference: tx_ref
+                        }
+                    }
+                }
+            }, include: {
+                payment: true
+            }
+        })
+
+        return paymentUpdated
+    } catch (error) {
+        console.log(error.message)
+        throw new Error(error.message || 'Fail to update Booking.')
+    }
+}
+
+module.exports = { createBooking, cancelBook, propertyBookings, paymentSuccessfulFail, attachTransactionRef };
