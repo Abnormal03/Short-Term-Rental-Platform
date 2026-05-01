@@ -93,6 +93,8 @@ enum BookingStatus {
   CONFIRMED
   CANCELLED
   COMPLETED
+  REFUNDED
+  REFUNDING
 }
 
 model Payment {
@@ -111,6 +113,7 @@ enum PaymentStatus {
   PENDING
   COMPLETED
   FAILED
+  REFUNDED
 }
 
 model Refund {

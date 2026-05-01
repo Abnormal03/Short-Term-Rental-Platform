@@ -1,4 +1,4 @@
-const { createBooking, cancelBook, propertyBookings, paymentSuccessfulFail, attachTransactionRef } = require("../services/Booking.service")
+const { createBooking, cancelBook, propertyBookings, paymentSuccessfulFail, attachTransactionRef, confirmedBookings, guestBookings } = require("../services/Booking.service")
 const { getAuth } = require('@clerk/express');
 const { initializePayment } = require("../services/Chapa.service");
 
@@ -63,6 +63,22 @@ const getPropertyBookings = async (req, res) => {
     }
 }
 
+const getConfirmedBookings = async (req, res) => {
+    try {
+        const { propertyId } = req.params;
+        const { userId } = getAuth(req);
+
+        const bookings = await confirmedBookings(propertyId, userId);
+
+        if (bookings) {
+            return res.status(200).json({ bookings: bookings })
+        }
+        return res.status(400).json({ message: 'Something Happened while fetching Bookings.' })
+    } catch (error) {
+        return res.status(500).json({ message: error.message })
+    }
+}
+
 
 const paymentSuccessFail = async (req, res) => {
     try {
@@ -82,4 +98,36 @@ const paymentSuccessFail = async (req, res) => {
     }
 }
 
-module.exports = { addBooking, cancelBooking, getPropertyBookings, paymentSuccessFail }
+//get my booking for guest
+const myBookings = async (req, res) => {
+    try {
+        const { userId } = getAuth(req);
+
+        const bookings = await guestBookings(userId);
+
+        if (bookings) {
+            return res.status(200).json({ bookings: bookings })
+        }
+        return res.status(400).json({ message: 'Unable to fetch Bookings.' })
+    } catch (error) {
+        return res.status(500).json({ message: error.message })
+    }
+}
+
+const guestDetailBooking = async (req, res) => {
+    try {
+        const { userId } = getAuth(req);
+        const { bookingId } = req.params;
+
+        const booking = await bookingDetail(bookingId, userId);
+
+        if (booking) {
+            return res.status(200).json({ booking: booking })
+        }
+        return res.status(400).json({ message: 'Unable to fetch Booking.' })
+    } catch (error) {
+        return res.status(500).json({ message: error.message })
+    }
+}
+
+module.exports = { addBooking, cancelBooking, getPropertyBookings, paymentSuccessFail, getConfirmedBookings, myBookings, guestDetailBooking }

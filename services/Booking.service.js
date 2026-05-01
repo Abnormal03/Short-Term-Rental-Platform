@@ -85,29 +85,44 @@ const createBooking = async (booking, clerkId, propertyId) => {
 const cancelBook = async (bookingId, reason) => {
     try {
         //fetch booking...
-        const booking = await prisma.booking.findFirst({
-            where: {
-                booking_id: bookingId,
-                payment: {
-                    payment_status: {
-                        not: "FAILED"
-                    }
-                },
-                booking_status: {
-                    notIn: ['CANCELLED', 'COMPLETED']
+        const booking = await prisma.$transaction(async (tx) => {
+
+            const booking = await tx.booking.findUnique({
+                where: { booking_id: bookingId },
+                include: {
+                    payment: true
                 }
-            },
-            include: {
-                payment: true
+            });
+
+            if (!booking) throw new Error("Booking not found");
+
+            if (["CANCELLED", "COMPLETED"].includes(booking.booking_status)) {
+                throw new Error("Booking not cancellable");
             }
-        })
+
+            // prevent race conditions (TOCTOU)
+            await tx.booking.update({
+                where: {
+                    booking_id: bookingId
+                },
+                data: {
+                    booking_status: "REFUNDING"
+                }
+            });
+
+            return booking;
+        });
 
         if (!booking) {
             throw new Error('Unable to find Booking.')
         }
 
+        if (booking.payment.refund > 0) {
+            throw new Error("Already refunded");
+        }
+
         // check Elligable...
-        const hoursSinceBooking = (new Date() - new Date(booking.created_at)) / (1000 * 60 ^ 60);
+        const hoursSinceBooking = (new Date() - new Date(booking.created_at)) / (1000 * 60 * 60);
         const isElligible = hoursSinceBooking <= 24;
 
         // refund in chapa if illigable...
@@ -116,7 +131,7 @@ const cancelBook = async (bookingId, reason) => {
             refundDetail = await chapaRefund(booking.payment.transaction_reference);
 
             if (!refundDetail.success) {
-                throw new Error('Enable to Refund Transaction.')
+                throw new Error('Unable to Refund Transaction.')
             }
         }
 
@@ -128,7 +143,7 @@ const cancelBook = async (bookingId, reason) => {
                         payment_id: booking.payment.payment_id
                     },
                     data: {
-                        payment_status: "FAILED"
+                        payment_status: "REFUNDED"
                     }
                 })
             }
@@ -140,7 +155,7 @@ const cancelBook = async (bookingId, reason) => {
                         reason: reason,
                         refund_status: "COMPLETED",
                         amount: booking.total_price,
-                        transaction_reference: refundResult.reference // 👈 use chapa ref
+                        transaction_reference: refundDetail.reference
                     }
                 });
             }
@@ -190,6 +205,27 @@ const propertyBookings = async (propertyId) => {
     } catch (error) {
         console.log(error.message);
         throw new Error(error.message || "Failed to fetch Bookings.")
+    }
+}
+
+const confirmedBookings = async (propertyId, clerkId) => {
+    try {
+        const bookings = await prisma.booking.findMany({
+            where: {
+                property_id: propertyId,
+                property: {
+                    host: {
+                        Clerk_id: clerkId
+                    }
+                },
+                booking_status: "CONFIRMED"
+            }
+        });
+
+        return bookings;
+    } catch (error) {
+        console.log(error.message);
+        throw new Error(error.message || "Failed to Fetch Bookings");
     }
 }
 
@@ -254,4 +290,49 @@ const attachTransactionRef = async (bookingId, paymentId, tx_ref) => {
     }
 }
 
-module.exports = { createBooking, cancelBook, propertyBookings, paymentSuccessfulFail, attachTransactionRef };
+const guestBookings = async (guestId) => {
+    try {
+        const guest = await prisma.user.findUnique({
+            where: {
+                Clerk_id: guestId
+            }
+        })
+        const bookings = await prisma.booking.findMany({
+            where: {
+                user_id: guest.user_id
+            }
+        })
+        return bookings;
+    } catch (error) {
+        console.log(error.message);
+        throw new Error(error.message || 'Unable to fetch Bookings.')
+    }
+}
+
+const bookingDetail = async (bookingId, guestId) => {
+    try {
+        const guest = await prisma.user.findUnique({
+            where: {
+                Clerk_id: guestId
+            }
+        })
+
+        if (!guest) {
+            throw new Error('Guest not found.')
+        }
+
+        const booking = await prisma.booking.findFirst({
+            where: {
+                booking_id: bookingId,
+                user_id: guest.user_id
+            }
+        })
+        return booking;
+    } catch (error) {
+        console.log(error.message);
+        throw new Error(error.message || 'Unable to fetch Booking Detail.')
+    }
+}
+
+
+module.exports = { createBooking, cancelBook, propertyBookings, paymentSuccessfulFail, attachTransactionRef, confirmedBookings, guestBookings, bookingDetail };
