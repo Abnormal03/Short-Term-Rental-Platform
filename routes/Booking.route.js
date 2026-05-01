@@ -15,7 +15,7 @@ router.put('/cancel/:bookingId', verifyRole(['GUEST']), cancelBooking);
 router.get('/property/:propertyId', verifyRole(['HOST', 'ADMIN']), getPropertyBookings);
 
 // payment success/failed
-router.put('/payment/:bookingId', verifyRole(['GUEST', 'ADMIN']), paymentSuccessFail);
+// router.put('/payment/:bookingId', verifyRole(['GUEST', 'ADMIN']), paymentSuccessFail);
 
 //get confirmed bookings for a property
 router.get('/confirmed/:propertyId', verifyRole(['HOST']), getConfirmedBookings);

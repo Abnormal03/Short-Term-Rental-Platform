@@ -1,4 +1,4 @@
-const { createBooking, cancelBook, propertyBookings, paymentSuccessfulFail, attachTransactionRef, confirmedBookings, guestBookings } = require("../services/Booking.service")
+const { createBooking, cancelBook, propertyBookings, paymentSuccessfulFail, attachTransactionRef, confirmedBookings, guestBookings, bookingDetail } = require("../services/Booking.service")
 const { getAuth } = require('@clerk/express');
 const { initializePayment } = require("../services/Chapa.service");
 

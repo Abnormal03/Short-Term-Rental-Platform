@@ -325,6 +325,14 @@ const bookingDetail = async (bookingId, guestId) => {
             where: {
                 booking_id: bookingId,
                 user_id: guest.user_id
+            }, include: {
+                payment: true,
+                property: {
+                    include: {
+                        host: true
+                    }
+                }
+
             }
         })
         return booking;
