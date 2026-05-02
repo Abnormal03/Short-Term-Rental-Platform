@@ -6,6 +6,7 @@ const { syncUser } = require('./controllers/Auth.controller');
 
 const propertyRoutes = require('./routes/Properties.route');
 const bookingRoutes = require('./routes/Booking.route');
+const userRoutes = require('./routes/User.route');
 
 const { handleUpdate } = require('./controllers/Chapa.controller');
 
@@ -24,6 +25,9 @@ app.use('/api/v1/properties', requireAuth(), propertyRoutes);
 
 //booking route...
 app.use('/api/v1/bookings', requireAuth(), bookingRoutes)
+
+//user route...
+app.use('/api/v1/users', requireAuth(), userRoutes)
 
 //testing purpose....
 app.get('/', (req, res) => {
