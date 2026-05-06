@@ -309,5 +309,119 @@ const approveProp = async (propertyId, approved) => {
     }
 }
 
+const propertyDetail = async (propertyId) => {
+    try {
+        const property = await prisma.property.findFirst({
+            where: {
+                property_id: propertyId,
+                verification_status: "APPROVED",
+                deleted_at: null
+            },
+            include: {
+                availabilities: true,
+                host: {
+                    select: {
+                        name: true,
+                        email: true,
+                        phone_number: true,
+                        is_verified_host: true
+                    }
+                },
+                propertyImages: true
+            }
+        })
+        return property;
+    } catch (error) {
+        console.log(error.message);
+        throw new Error(error.message || "Failed to get property details.");
+    }
+}
 
-module.exports = { getAllProperties, getUserProperty, addNewProperty, getunverifiedProperty, deleteUserProperty, deletedProperties, propertyUpdate, approveProp };
+const propertyByCity = async (city) => {
+    try {
+        const properties = await prisma.property.findMany({
+            where: {
+                city: {
+                    equals: city,
+                    mode: 'insensitive'
+                },
+                AND: {
+                    verification_status: "APPROVED",
+                    deleted_at: null
+                }
+            },
+            include: {
+                availabilities: true,
+                host: {
+                    select: {
+                        name: true,
+                        email: true,
+                        is_verified_host: true
+                    }
+                },
+                propertyImages: true
+            }
+        })
+        return properties;
+    } catch (error) {
+        console.log(error.message);
+        throw new Error(error.message || "Failed to get properties by city.");
+    }
+}
+
+const availabilityUpdate = async (propertyId, userId, availability) => {
+    try {
+        const updatedProperty = await prisma.$transaction(async (tx) => {
+            //check if the user is the owner of the property...
+            const exists = await tx.property.findFirst({
+                where: {
+                    property_id: propertyId,
+                    host_id: userId
+                }
+            })
+
+            if (!exists) {
+                throw new Error('Property not found or you are not the owner of the property.')
+            }
+
+            const updatedProperty = await tx.property.update({
+                where: {
+                    property_id: propertyId,
+                    host_id: userId
+                },
+                data: {
+                    availabilities: {
+                        update: {
+                            data: {
+                                available_from: new Date(availability.available_from),
+                                available_to: new Date(availability.available_to)
+                            }
+                        }
+                    }
+                }
+            })
+
+            return updatedProperty;
+        })
+
+        return updatedProperty;
+    } catch (error) {
+        console.log(error.message);
+        throw new Error(error.message || "Unable to update Property.")
+    }
+}
+
+
+module.exports = {
+    getAllProperties,
+    getUserProperty,
+    addNewProperty,
+    getunverifiedProperty,
+    deleteUserProperty,
+    deletedProperties,
+    propertyUpdate,
+    approveProp,
+    propertyDetail,
+    propertyByCity,
+    availabilityUpdate
+};

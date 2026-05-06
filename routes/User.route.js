@@ -6,7 +6,7 @@ const { updateUserRole, getAllUsers, verifyHost, deleteUser } = require('../cont
 const router = express.Router();
 
 //set user role...
-router.put('/user/update-user', updateUserRole);
+router.put('/user/update-user', verifyRole(['HOST']), updateUserRole);
 
 //get all users...
 router.get('/all', verifyRole(['ADMIN']), getAllUsers);

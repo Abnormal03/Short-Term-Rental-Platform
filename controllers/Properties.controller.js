@@ -1,6 +1,6 @@
 const { getAuth } = require('@clerk/express')
 
-const { getAllProperties, getUserProperty, addNewProperty, getunverifiedProperty, deleteUserProperty, deletedProperties, propertyUpdate, approveProp } = require("../services/Properties.service");
+const { getAllProperties, getUserProperty, addNewProperty, getunverifiedProperty, deleteUserProperty, deletedProperties, propertyUpdate, approveProp, propertyDetail, propertyByCity, availabilityUpdate } = require("../services/Properties.service");
 
 
 const getProperties = async (req, res) => {
@@ -10,6 +10,22 @@ const getProperties = async (req, res) => {
         return res.status(200).json({ properties: properties });
     } catch (error) {
 
+        return res.status(500).json({ message: error.message })
+    }
+}
+
+const getPropertyDetails = async (req, res) => {
+    try {
+        const { propertyId } = req.params;
+
+        const propertyDetails = await propertyDetail(propertyId);
+
+        if (!propertyDetails) {
+            return res.status(404).json({ message: "Property not found" })
+        }
+
+        return res.status(200).json({ propertyDetails: propertyDetails })
+    } catch (error) {
         return res.status(500).json({ message: error.message })
     }
 }
@@ -134,4 +150,41 @@ const approveProperty = async (req, res) => {
         return res.status(500).json({ message: error.message })
     }
 }
-module.exports = { getProperties, getUserProperties, createProperty, getUnverifiedProperties, deleteProperty, getDeletedProperties, updateProperty, approveProperty }
+
+
+const getPropertiesByCity = async (req, res) => {
+    try {
+        const { city } = req.params;
+
+        const properties = await propertyByCity(city);
+
+        if (!properties) {
+            return res.status(400).json({ message: 'Failed to fetch properties.' });
+        }
+
+        return res.status(200).json({ properties: properties })
+    } catch (error) {
+        return res.status(500).json({ message: error.message })
+    }
+}
+
+
+const updateAvailability = async (req, res) => {
+    try {
+        const { propertyId } = req.params;
+        const { available } = req.body;
+        const { userId } = getAuth(req);
+
+        const updatedProperty = await availabilityUpdate(propertyId, userId, available)
+
+        if (!updatedProperty) {
+            return res.status(400).json({ message: 'Failed to update property availability.' })
+        }
+
+        return res.status(200).json({ updatedProperty: updatedProperty })
+    } catch (error) {
+        return res.status(500).json({ message: error.message })
+    }
+}
+
+module.exports = { getProperties, getUserProperties, createProperty, getUnverifiedProperties, deleteProperty, getDeletedProperties, updateProperty, approveProperty, getPropertyDetails, getPropertiesByCity, updateAvailability }
