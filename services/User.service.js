@@ -107,9 +107,118 @@ const verifyHost = async (userId, verified) => {
 //     }
 // }
 
+const userProfile = async (userId) => {
+    try {
+        //getting user profile and recent bookings or properties if user is host
+        const user = await prisma.user.findUnique({
+            where: {
+                Clerk_id: userId
+            }, include: {
+                languagePreference: true,
+                properties: {
+                    take: 5,
+                    orderBy: {
+                        created_at: 'desc'
+                    }
+                },
+                bookings: {
+                    take: 5,
+                    orderBy: {
+                        created_at: 'desc'
+                    }
+                }
+            }
+        });
+        return user;
+    } catch (error) {
+        console.error('Error fetching user profile:', error.message);
+        throw new Error(error.message || 'Failed to fetch user profile');
+    }
+}
+
+
+const updateUser = async (userId, updateData) => {
+    try {
+        // Allowlist of fields that can be updated via this function
+        const allowedFields = ['name', 'phone_number'];
+        const sanitizedData = {};
+        for (const field of allowedFields) {
+            if (updateData[field] !== undefined) {
+                sanitizedData[field] = updateData[field];
+            }
+        }
+
+        const updatedUser = await prisma.user.update({
+            where: {
+                Clerk_id: userId
+            },
+            data: sanitizedData
+        })
+        return updatedUser;
+    } catch (error) {
+        console.error('Error updating user profile:', error.message);
+        throw new Error(error.message || 'Failed to update user profile');
+    }
+}
+
+const hostProfile = async (hostId) => {
+    try {
+        //hostId is user_id of the host whose profile is being fetched
+        const host = await prisma.user.findUnique({
+            where: {
+                user_id: hostId
+            },
+            include: {
+                properties: true
+            }
+        })
+        return host;
+    } catch (error) {
+        console.error('Error fetching host profile:', error.message);
+        throw new Error(error.message || 'Failed to fetch host profile');
+    }
+}
+
+
+const updatePref = async (userId, languageCode) => {
+    try {
+
+        const user = await prisma.user.findUnique({
+            where: {
+                Clerk_id: userId
+            }
+        });
+
+        if (!user) {
+            throw new Error('User not found');
+        }
+
+        const updatedPref = await prisma.language_preference.upsert({
+            where: {
+                user_id: user.user_id
+            },
+            update: {
+                language_code: languageCode
+            },
+            create: {
+                user_id: user.user_id,
+                language_code: languageCode
+            }
+        })
+        return updatedPref;
+    } catch (error) {
+        console.error('Error updating language preference:', error.message);
+        throw new Error(error.message || 'Failed to update language preference');
+    }
+}
+
 module.exports = {
     updateRole,
     getAllUsersFromDB,
     verifyHost,
+    userProfile,
+    updateUser,
+    hostProfile,
+    updatePref,
     // deleteUserFromDb
 }

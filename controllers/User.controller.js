@@ -1,5 +1,5 @@
 const { getAuth } = require('@clerk/express');
-const { updateRole, getAllUsersFromDB, verifyHost: getVerifiedHost } = require('../services/User.service');
+const { updateRole, getAllUsersFromDB, verifyHost: getVerifiedHost, hostProfile, userProfile, updateUser, updatePref } = require('../services/User.service');
 
 const updateUserRole = async (req, res) => {
     try {
@@ -65,9 +65,76 @@ const verifyHost = async (req, res) => {
 //     }
 // }
 
+
+const getUserProfile = async (req, res) => {
+    try {
+        const { userId } = getAuth(req);
+        const user = await userProfile(userId);
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        res.status(200).json({ user: user });
+    } catch (error) {
+        res.status(500).json({ message: error.message || 'Failed to get user profile.' });
+    }
+}
+
+const updateUserProfile = async (req, res) => {
+    try {
+        const { userId } = getAuth(req);
+        const updates = req.body; // exprecting an object with fields to update... {name, phone_number}
+
+        const updatedUser = await updateUser(userId, updates);
+
+        if (!updatedUser) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        res.status(200).json({ user: updatedUser });
+    } catch (error) {
+        res.status(500).json({ message: error.message || 'Failed to update user profile.' });
+    }
+}
+
+
+const getHostProfile = async (req, res) => {
+    try {
+        const { hostId } = req.params;
+        const user = await hostProfile(hostId);
+
+        if (!user) {
+            return res.status(404).json({ message: 'Host not found' });
+        }
+        res.status(200).json({ user: user });
+    } catch (error) {
+        res.status(500).json({ message: error.message || 'Failed to get host profile.' });
+    }
+}
+
+
+const updatePreference = async (req, res) => {
+    try {
+        const { userId } = getAuth(req);
+        const { language } = req.body;
+
+        const updatedUser = await updatePref(userId, language);
+
+        if (!updatedUser) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        res.status(200).json({ preference: updatedUser });
+    } catch (error) {
+        res.status(500).json({ message: error.message || 'Failed to update language preference.' });
+    }
+}
+
 module.exports = {
     updateUserRole,
     getAllUsers,
     verifyHost,
+    getUserProfile,
+    updateUserProfile,
+    getHostProfile,
+    updatePreference
     // deleteUser
 }
