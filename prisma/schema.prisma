@@ -26,6 +26,7 @@ model User {
   properties         Property[]
   bookings           Booking[]
   languagePreference Language_preference?
+  disputes           Dispute[]
 }
 
 enum PaymentPreference {
@@ -86,6 +87,7 @@ model Booking {
   booking_status BookingStatus @default(PENDING)
   created_at     DateTime      @default(now())
   payment        Payment?
+  disputes       Dispute[]
 }
 
 enum BookingStatus {
@@ -95,6 +97,7 @@ enum BookingStatus {
   COMPLETED
   REFUNDED
   REFUNDING
+  DISPUTED
 }
 
 model Payment {
@@ -146,4 +149,26 @@ model Language_preference {
   user_id       String @unique
   language_code String
   user          User   @relation(fields: [user_id], references: [user_id])
+}
+
+model Dispute {
+  id         String        @id @default(cuid())
+  booking_id String
+  raised_by  String // userId
+  reason     String
+  status     DisputeStatus @default(OPEN)
+  resolution String? // admin note on resolution
+  created_at DateTime      @default(now())
+  updated_at DateTime      @updatedAt
+
+  booking Booking @relation(fields: [booking_id], references: [booking_id], onDelete: Cascade)
+  user    User    @relation(fields: [raised_by], references: [user_id])
+
+  @@index([booking_id])
+}
+
+enum DisputeStatus {
+  OPEN
+  RESOLVED
+  REJECTED
 }

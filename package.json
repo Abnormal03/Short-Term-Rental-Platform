@@ -20,6 +20,8 @@
     "svix": "^1.89.0"
   },
   "devDependencies": {
+    "@clerk/backend": "^3.4.7",
+    "axios": "^1.16.0",
     "prisma": "^7.6.0"
   }
 }

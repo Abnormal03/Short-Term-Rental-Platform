@@ -11,6 +11,10 @@ const verifyRole = (Role) => {
                     Clerk_id: userId
                 }
             })
+
+            if (!user) {
+                return res.status(404).json({ message: "user not found!" })
+            }
             const authorized = Role.some((role) => role === user.Role)
             if (!authorized) {
                 return res.status(403).json({ message: "unauthorized access!" })
