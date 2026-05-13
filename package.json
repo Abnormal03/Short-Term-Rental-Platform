@@ -1,27 +1,10 @@
 {
-  "name": "backend",
-  "version": "1.0.0",
-  "main": "index.js",
-  "type": "commonjs",
+  "name": "short-term-rental-platform",
+  "private": true,
   "scripts": {
-    "start": "nodemon server.js"
-  },
-  "author": "",
-  "license": "ISC",
-  "description": "",
-  "dependencies": {
-    "@clerk/express": "^2.0.8",
-    "@prisma/adapter-pg": "^7.6.0",
-    "@prisma/client": "^7.6.0",
-    "dotenv": "^17.3.1",
-    "express": "^5.2.1",
-    "nodemon": "^3.1.14",
-    "pg": "^8.20.0",
-    "svix": "^1.89.0"
-  },
-  "devDependencies": {
-    "@clerk/backend": "^3.4.7",
-    "axios": "^1.16.0",
-    "prisma": "^7.6.0"
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev": "npm run dev:backend & npm run dev:frontend",
+    "install:all": "cd backend && npm install && cd ../frontend && npm install"
   }
 }
