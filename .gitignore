@@ -9,3 +9,4 @@ frontend/.env
 # build outputs
 frontend/dist
 backend/generated
+node_modules
