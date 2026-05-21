@@ -190,26 +190,47 @@ const cancelBook = async (bookingId, reason) => {
 }
 
 
-const propertyBookings = async (propertyId) => {
+const propertyBookings = async (propertyId, page, limit) => {
     try {
+        if (!page || page < 1) {
+            throw new Error('Page must be a positive integer');
+        }
+        if (!limit || limit < 1 || limit > 100) {
+            throw new Error('Limit must be between 1 and 100');
+        }
+        const skip = (page - 1) * limit;
         const bookings = await prisma.booking.findMany({
+            where: {
+                property_id: propertyId
+            },
+            skip,
+            take: limit
+        })
+
+        const count = await prisma.booking.count({
             where: {
                 property_id: propertyId
             }
         })
-
-        if (bookings.length === 0) {
+        if (count === 0 || bookings?.length === 0) {
             throw new Error('No booking found.')
         }
-        return bookings;
+        return { bookings, count };
     } catch (error) {
         console.log(error.message);
         throw new Error(error.message || "Failed to fetch Bookings.")
     }
 }
 
-const confirmedBookings = async (propertyId, clerkId) => {
+const confirmedBookings = async (propertyId, clerkId, page, limit) => {
     try {
+        if (!page || page < 1) {
+            throw new Error('Page must be a positive integer');
+        }
+        if (!limit || limit < 1 || limit > 100) {
+            throw new Error('Limit must be between 1 and 100');
+        }
+        const skip = (page - 1) * limit;
         const bookings = await prisma.booking.findMany({
             where: {
                 property_id: propertyId,
@@ -219,10 +240,24 @@ const confirmedBookings = async (propertyId, clerkId) => {
                     }
                 },
                 booking_status: "CONFIRMED"
-            }
+            },
+            skip,
+            take: limit
         });
 
-        return bookings;
+        const count = prisma.booking.count({
+            where: {
+                property_id: propertyId,
+                property: {
+                    host: {
+                        Clerk_id: clerkId
+                    }
+                },
+                booking_status: "CONFIRMED"
+            }
+        })
+
+        return { bookings, count };
     } catch (error) {
         console.log(error.message);
         throw new Error(error.message || "Failed to Fetch Bookings");

@@ -53,9 +53,12 @@ const cancelBooking = async (req, res) => {
 const getPropertyBookings = async (req, res) => {
     try {
         const { propertyId } = req.params;
-        const bookings = await propertyBookings(propertyId);
+        const { page, limit } = req.query;
+
+        const { bookings, count } = await propertyBookings(propertyId, page, limit);
+
         if (bookings) {
-            return res.status(200).json({ bookings: bookings })
+            return res.status(200).json({ bookings: bookings, count })
         }
         return res.status(400).json({ message: 'Something Happened while fetching Bookings.' })
     } catch (error) {
@@ -67,11 +70,12 @@ const getConfirmedBookings = async (req, res) => {
     try {
         const { propertyId } = req.params;
         const { userId } = getAuth(req);
+        const { page, limit } = req.query;
 
-        const bookings = await confirmedBookings(propertyId, userId);
+        const { bookings, count } = await confirmedBookings(propertyId, userId, page, limit);
 
         if (bookings) {
-            return res.status(200).json({ bookings: bookings })
+            return res.status(200).json({ bookings, count })
         }
         return res.status(400).json({ message: 'Something Happened while fetching Bookings.' })
     } catch (error) {

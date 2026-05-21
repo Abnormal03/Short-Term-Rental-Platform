@@ -5,11 +5,11 @@ const { getAllProperties, getUserProperty, addNewProperty, getunverifiedProperty
 
 const getProperties = async (req, res) => {
     try {
-        const properties = await getAllProperties();
+        const { page, limit } = req.query;
+        const { properties, count } = await getAllProperties(page, limit);
 
-        return res.status(200).json({ properties: properties });
+        return res.status(200).json({ properties: properties, count });
     } catch (error) {
-
         return res.status(500).json({ message: error.message })
     }
 }
@@ -34,10 +34,11 @@ const getPropertyDetails = async (req, res) => {
 const getUserProperties = async (req, res) => {
 
     const { id } = req.params;
+    const { page, limit } = req.query;
     try {
-        const properties = await getUserProperty(id);
+        const { properties, count } = await getUserProperty(id, page, limit);
 
-        return res.status(200).json({ properties: properties });
+        return res.status(200).json({ properties: properties, count });
     } catch (error) {
         return res.status(500).json({ message: error.message })
     }
@@ -70,10 +71,12 @@ const createProperty = async (req, res) => {
 
 const getUnverifiedProperties = async (req, res) => {
     try {
-        const properties = await getunverifiedProperty();
+
+        const { page, limit } = req.query;
+        const { properties, count } = await getunverifiedProperty(page, limit);
 
         if (properties) {
-            return res.status(200).json({ properties: properties })
+            return res.status(200).json({ properties: properties, count })
         } else {
             throw new Error('unable to process the request!')
         }
@@ -100,10 +103,12 @@ const deleteProperty = async (req, res) => {
 
 const getDeletedProperties = async (req, res) => {
     try {
-        const properties = await deletedProperties();
+        const { page, limit } = req.query;
+        const { properties, count } = await deletedProperties(page, limit);
 
-        if (properties) {
-            return res.status(200).json({ deletedProperties: properties })
+        if (properties && count > 0) {
+            const count = properties.length;
+            return res.status(200).json({ deletedProperties: properties, count })
         }
         return res.status(400).json({ message: "No Deleted properties." })
     } catch (error) {
@@ -155,14 +160,14 @@ const approveProperty = async (req, res) => {
 const getPropertiesByCity = async (req, res) => {
     try {
         const { city } = req.params;
+        const { page, limit } = req.query;
 
-        const properties = await propertyByCity(city);
+        const { properties, count } = await propertyByCity(city, page, limit);
 
         if (!properties) {
             return res.status(400).json({ message: 'Failed to fetch properties.' });
         }
-
-        return res.status(200).json({ properties: properties })
+        return res.status(200).json({ properties: properties, count })
     } catch (error) {
         return res.status(500).json({ message: error.message })
     }

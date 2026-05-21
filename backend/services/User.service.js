@@ -37,16 +37,33 @@ const updateRole = async (userId, role, phoneNumber) => {
     }
 }
 
-const getAllUsersFromDB = async (userId) => {
+const getAllUsersFromDB = async (userId, page, limit) => {
     try {
+        if (!page || page < 1) {
+            throw new Error('Page must be a positive integer');
+        }
+        if (!limit || limit < 1 || limit > 100) {
+            throw new Error('Limit must be between 1 and 100');
+        }
+        const skip = (page - 1) * limit;
         const users = await prisma.user.findMany({
             where: {
                 Clerk_id: {
                     not: userId
                 }
-            }
+            },
+            skip,
+            take: limit
         });
-        return users;
+
+        const count = await prisma.user.count({
+            where: {
+                Clerk_id: {
+                    not: userId
+                }
+            }
+        })
+        return { users, count };
     } catch (error) {
         console.error('Error fetching all users:', error.message);
         throw new Error(error.message || 'Failed to fetch all users');

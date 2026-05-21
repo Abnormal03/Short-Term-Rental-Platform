@@ -133,8 +133,15 @@ const resolveDisputeService = async (disputeId, resolution, action) => {
     }
 }
 
-const getAllDisputesService = async () => {
+const getAllDisputesService = async (page, limit) => {
     try {
+        if (!page || page < 1) {
+            throw new Error('Page must be a positive integer');
+        }
+        if (!limit || limit < 1 || limit > 100) {
+            throw new Error('Limit must be between 1 and 100');
+        }
+        const skip = (page - 1) * limit;
         const disputes = await prisma.dispute.findMany({
             where: {
                 status: 'OPEN'
@@ -156,7 +163,9 @@ const getAllDisputesService = async () => {
                         }
                     }
                 }
-            }
+            },
+            skip,
+            take: limit
         })
 
         if (!disputes || disputes.length === 0) {

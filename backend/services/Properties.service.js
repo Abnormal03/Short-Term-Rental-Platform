@@ -1,6 +1,20 @@
 const prisma = require('../config/db');
-const getAllProperties = async () => {
+
+
+const validatePagination = (page, limit, maxLimit = 100) => {
+    if (!page || page < 1) {
+        throw new Error('Page must be a positive integer');
+    }
+    if (!limit || limit < 1 || limit > maxLimit) {
+        throw new Error(`Limit must be between 1 and ${maxLimit}`);
+    }
+};
+
+
+const getAllProperties = async (page, limit) => {
     try {
+        validatePagination(page, limit);
+        const skip = (page - 1) * limit;
         //get all verified and active/not deleted hosts properties...
         const properties = await prisma.property.findMany({
             where: {
@@ -19,24 +33,52 @@ const getAllProperties = async () => {
                     }
                 },
                 propertyImages: true
-            }
+            },
+            skip: skip,
+            take: limit
         });
+
+        const count = await prisma.property.count({
+            where: {
+                AND: {
+                    verification_status: "APPROVED",
+                    deleted_at: null
+                }
+
+            }
+        })
 
         if (!properties) {
             throw new Error('unable to get products')
         }
 
-        return properties;
+        if (count === 0) {
+            throw new Error('No property found.')
+        }
+
+        return { properties, count };
     } catch (error) {
         console.log(error.message);
         throw new Error(error.message || 'unable to get products')
     }
 }
 
-const getUserProperty = async (id) => {
+const getUserProperty = async (id, page, limit) => {
     try {
-
+        validatePagination(page, limit)
+        const skip = (page - 1) * limit;
         const properties = await prisma.property.findMany({
+            where: {
+                AND: {
+                    host_id: id,
+                    deleted_at: null
+                }
+            },
+            skip: skip,
+            take: limit
+        })
+
+        const count = await prisma.property.count({
             where: {
                 AND: {
                     host_id: id,
@@ -48,7 +90,11 @@ const getUserProperty = async (id) => {
             throw new Error('unable to get products')
         }
 
-        return properties;
+        if (count === 0) {
+            throw new Error('No property found');
+        }
+
+        return { properties, count };
     } catch (error) {
         console.log(error.message);
         throw new Error(error.message || 'unable to get products');
@@ -94,9 +140,20 @@ const addNewProperty = async (property, userId) => {
 }
 
 
-const getunverifiedProperty = async () => {
+const getunverifiedProperty = async (page, limit) => {
     try {
+        validatePagination(page, limit);
+        const skip = (page - 1) * limit;
         const properties = await prisma.property.findMany({
+            where: {
+                verification_status: "PENDING",
+                deleted_at: null
+            },
+            skip: skip,
+            take: limit
+        })
+
+        const count = await prisma.property.count({
             where: {
                 verification_status: "PENDING",
                 deleted_at: null
@@ -107,7 +164,7 @@ const getunverifiedProperty = async () => {
             throw new Error('unable to get products')
         }
 
-        return properties;
+        return { properties, count };
     } catch (error) {
         console.log(error.message);
         throw new Error(error.message || 'unable to create Propduct!');
@@ -189,9 +246,11 @@ const deleteUserProperty = async (hostId, id) => {
 }
 
 
-const deletedProperties = async () => {
+const deletedProperties = async (page, limit) => {
     try {
-        const deletedProperties = await prisma.property.findMany({
+        validatePagination(page, limit);
+        const skip = (page - 1) * limit;
+        const properties = await prisma.property.findMany({
             where: {
                 deleted_at: {
                     not: null
@@ -206,13 +265,23 @@ const deletedProperties = async () => {
                     }
                 },
                 propertyImages: true
+            },
+            skip,
+            take: limit
+        })
+
+        const count = await prisma.property.count({
+            where: {
+                deleted_at: {
+                    not: null
+                }
             }
         })
 
-        if (deletedProperties) {
-            return deletedProperties
+        if (properties) {
+            return { properties, count }
         }
-        return null;
+        return { properties: null, count };
     } catch (error) {
         console.log(error.message);
         throw new Error(error.message || 'Failed to fetch deleted properties.');
@@ -337,8 +406,10 @@ const propertyDetail = async (propertyId) => {
     }
 }
 
-const propertyByCity = async (city) => {
+const propertyByCity = async (city, page, limit) => {
     try {
+        validatePagination(page, limit);
+        const skip = (page - 1) * limit;
         const properties = await prisma.property.findMany({
             where: {
                 city: {
@@ -360,9 +431,24 @@ const propertyByCity = async (city) => {
                     }
                 },
                 propertyImages: true
+            },
+            skip,
+            take: limit
+        })
+
+        const count = await prisma.property.count({
+            where: {
+                city: {
+                    equals: city,
+                    mode: 'insensitive'
+                },
+                AND: {
+                    verification_status: "APPROVED",
+                    deleted_at: null
+                }
             }
         })
-        return properties;
+        return { properties, count };
     } catch (error) {
         console.log(error.message);
         throw new Error(error.message || "Failed to get properties by city.");

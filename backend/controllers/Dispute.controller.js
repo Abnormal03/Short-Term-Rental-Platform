@@ -30,7 +30,8 @@ const resolveDispute = async (req, res) => {
 
 const getAllDisputes = async (req, res) => {
     try {
-        const disputes = await getAllDisputesService();
+        const { page, limit } = req.body;
+        const disputes = await getAllDisputesService(page, limit);
         return res.status(200).json({ disputes: disputes });
     } catch (error) {
         return res.status(500).json({ error: error.message });

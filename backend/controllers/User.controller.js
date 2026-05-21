@@ -23,12 +23,13 @@ const updateUserRole = async (req, res) => {
 const getAllUsers = async (req, res) => {
     try {
         const { userId } = getAuth(req);
-        const users = await getAllUsersFromDB(userId);
+        const { page, limit } = req.query;
+        const { users, count } = await getAllUsersFromDB(userId, page, limit);
 
-        if (!users || users.length === 0) {
+        if (!users) {
             return res.status(404).json({ message: 'No users found' });
         }
-        res.status(200).json({ users: users });
+        res.status(200).json({ users: users, count });
     } catch (error) {
         res.status(500).json({ message: error.message || 'Failed to get all users.' });
     }
