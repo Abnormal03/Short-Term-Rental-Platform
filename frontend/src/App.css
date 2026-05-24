@@ -41,6 +41,6 @@
 
 body {
   font-family: 'Sora', sans-serif;
-  background: var(--bg);
+  background: var(--bg-2);
   color: var(--text);
 }

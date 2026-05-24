@@ -5,20 +5,21 @@ import { BookOpenCheck, Calendar, ChevronLeft, CircleHelp, CircleQuestionMark, H
 import { Profiler, useState } from "react";
 import useUser from "../../store/useUser";
 
-const GuestNavbar = ({ isLoggedIn = true }) => {
-
+const GuestNavbar = () => {
+    const { user } = useUser();
+    const isLoggedIn = user ? true : false;
     const { language, toggleLanguage } = useLanguageStore();
     const navStyle = ({ isActive }) => {
-        return isActive ? "underline underline-offset-8 text-primary " : "hover:text-primary "
+        return isActive ? "underline underline-offset-8 text-secondary " : "hover:text-secondary text-primary "
     }
 
     const changeLanguagePref = () => {
         toggleLanguage(language => language === "en" ? "am" : "en")
     }
     return (
-        <nav className="flex font-bold justify-between sm:p-1 p-1 border-b items-center max-w-screen lg:top-0 left-0 lg:w-full">
+        <nav className="flex font-bold justify-between w- sm:p-1 p-1 border-b items-center max-w-screen lg:top-0 left-0 lg:w-full">
             <NavLink to={'/'} className={`text-2xl text-primary`} >Betoch</NavLink>
-            <div className="gap-3 flex items-center z-20 bg-bg py-3 lg:py-0 rounded-full lg:rounded-0 absolute lg:relative bottom-2 lg:border-0 pt-2 lg:pt-0 lg:bottom-0 left-0 justify-evenly w-screen lg:w-auto ">
+            <div className="gap-3 flex items-center z-20 bg-bg py-3 lg:py-0 rounded-full lg:rounded-0 absolute lg:relative bottom-5 lg:border-0 pt-2 lg:pt-0 lg:bottom-0 left-0 justify-evenly w-screen lg:w-auto ">
                 <NavLink to={'/explore'} className={navStyle} ><span className="hidden sm:block">Explore</span> <MapPinHouse className="sm:hidden" /> </NavLink>
                 <NavLink to={'/properties'} className={navStyle} ><span className="hidden sm:block">List Properties</span> <HouseWifi className="sm:hidden" /></NavLink>
                 {isLoggedIn && <NavLink to={'/mybookings'} className={navStyle} ><span className="hidden sm:block">My Bookings</span> <Calendar className="sm:hidden" /></NavLink>}
@@ -50,7 +51,6 @@ const GuestNavbar = ({ isLoggedIn = true }) => {
 const HostNavBar = () => {
 
     //side bar for hosts...
-
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const { language, toggleLanguage } = useLanguageStore();
 
@@ -62,12 +62,12 @@ const HostNavBar = () => {
         setIsMenuOpen(false);
     }
     return (
-        <nav className="flex flex-col font-semibold">
+        <nav className="flex flex-col font-bold bg-bg-2">
             <div className="flex w-screen justify-between p-2 text-primary md:hidden">
-                <Menu className={`md:hidden ${isMenuOpen ? "invisible" : "block"}`} onClick={() => setIsMenuOpen(true)} />
+                <Menu className={`md:hidden ${isMenuOpen ? "invisible" : "block"} size-8`} onClick={() => setIsMenuOpen(true)} />
                 <p className="font-bold text-3xl">Betoch</p>
             </div>
-            <div className={`flex flex-col ${isMenuOpen ? "flex" : "hidden"} md:flex md:min-h-screen fixed top-0 left-0 inset-y-0 md:w-70 md:min-w-70 z-10 md:z-0 bg-bg-2 justify-between p-2 md:max-w-fit`}>
+            <div className={`flex flex-col ${isMenuOpen ? "flex" : "hidden"} md:flex md:min-h-screen fixed sm:relative md:min-w-fit md:col-span-1 top-0 left-0 inset-y-0 z-10 md:z-0 bg-bg justify-between p-2`}>
                 <div className="py-10">
                     <div className="flex items-center justify-between text-primary">
                         <NavLink to={'/'} className={"text-2xl text-primary"} >Betoch Host</NavLink>
@@ -76,11 +76,11 @@ const HostNavBar = () => {
                     <p className="text-sm font-light">Host property management</p>
 
                     <div className="mt-5">
-                        <NavLink to={'/overview'} className={navStyle} onClick={handleClick} > <LayoutDashboard /> <span>Overview</span> </NavLink>
-                        <NavLink to={'/properties'} className={navStyle} onClick={handleClick}> <House /> Properties</NavLink>
-                        <NavLink to={'/bookings'} className={navStyle} onClick={handleClick}> <Calendar /> Bookings</NavLink>
-                        <NavLink to={'/earning'} className={navStyle} onClick={handleClick}> <Wallet /> Earnings</NavLink>
-                        <NavLink to={'/support'} className={navStyle} onClick={handleClick}> <CircleHelp /> Support</NavLink>
+                        <NavLink to={'/overview'} className={navStyle} onClick={handleClick} > <LayoutDashboard className="text-green-400" /> <span>Overview</span> </NavLink>
+                        <NavLink to={'/properties'} className={navStyle} onClick={handleClick}> <House className="text-green-400" /> Properties</NavLink>
+                        <NavLink to={'/bookings'} className={navStyle} onClick={handleClick}> <Calendar className="text-green-400" /> Bookings</NavLink>
+                        <NavLink to={'/earning'} className={navStyle} onClick={handleClick}> <Wallet className="text-green-400" /> Earnings</NavLink>
+                        <NavLink to={'/support'} className={navStyle} onClick={handleClick}> <CircleHelp className="text-green-400" /> Support</NavLink>
                     </div>
                 </div>
 
@@ -102,7 +102,7 @@ const Navbar = () => {
     const { user, setUser } = useUser();
     const isHost = user?.role === "HOST" || false;
     return (
-        isHost ? <HostNavBar /> : <GuestNavbar isLoggedIn={false} />
+        true ? <HostNavBar /> : <GuestNavbar />
     )
 }
 

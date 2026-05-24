@@ -1,13 +1,15 @@
 import { BrowserRouter } from 'react-router-dom'
-import NavBar from './components/layout/Navbar'
-import './App.css';
-import Footer from './components/layout/Footer';
+import { QueryClientProvider } from '@tanstack/react-query'
+import queryClient from './lib/queryClient'
+
+import { SignedIn, SignedOut, SignInButton, SignUpButton, UserButton } from "@clerk/clerk-react"
 
 function App() {
   return (
     <BrowserRouter>
-      <NavBar />
-      <Footer />
+      <QueryClientProvider client={queryClient}>
+
+      </QueryClientProvider>
     </BrowserRouter>
   )
 }

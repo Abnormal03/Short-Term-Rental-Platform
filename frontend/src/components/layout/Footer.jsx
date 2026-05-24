@@ -47,7 +47,7 @@ const GuestFooter = () => {
 
 const HostFooter = () => {
     return (
-        <div className='absolute bottom-0 md:right-0 sm:w-[60%] lg:w-[80%] -z-10 sm:flex justify-between px-3 items-center md:pt-4'>
+        <div className='absolute bottom-0 md:right-0 sm:flex justify-between px-3 items-center  md:py-4 w-full z-5'>
             <hr className='w-screen sm:hidden' />
             <div className=''>
                 <h1 className='text-primary text-2xl font-bold'>Betoch</h1>
@@ -68,7 +68,7 @@ const Footer = () => {
 
     const ishost = user?.role === "HOST" || false
     return (
-        ishost ? <HostFooter /> : <GuestFooter />
+        true ? <HostFooter /> : <GuestFooter />
     )
 }
 
