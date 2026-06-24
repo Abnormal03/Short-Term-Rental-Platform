@@ -1,4 +1,4 @@
-const { getProperties, getUserProperties, createProperty, getUnverifiedProperties, deleteProperty, getDeletedProperties, updateProperty, approveProperty, getPropertyDetails, getPropertiesByCity, updateAvailability } = require('../controllers/Properties.controller')
+const { getProperties, getUserProperties, createProperty, getUnverifiedProperties, deleteProperty, getDeletedProperties, updateProperty, approveProperty, getPropertyDetails, getPropertiesByCity, updateAvailability, featuredProperties } = require('../controllers/Properties.controller')
 const { verifyRole } = require('../middlewares/Role.middleware');
 const express = require('express');
 
@@ -10,6 +10,9 @@ router.get('/', getProperties)
 
 //update property....
 router.put('/update/:propertyId', verifyRole(['HOST']), updateProperty)
+
+//get featured properties...
+router.get('/featured', featuredProperties);
 
 //getting user's properties...
 router.get('/user/:id', verifyRole(['HOST']), getUserProperties);

@@ -1,6 +1,6 @@
 const { getAuth } = require('@clerk/express')
 
-const { getAllProperties, getUserProperty, addNewProperty, getunverifiedProperty, deleteUserProperty, deletedProperties, propertyUpdate, approveProp, propertyDetail, propertyByCity, availabilityUpdate } = require("../services/Properties.service");
+const { getAllProperties, getUserProperty, addNewProperty, getunverifiedProperty, deleteUserProperty, deletedProperties, propertyUpdate, approveProp, propertyDetail, propertyByCity, availabilityUpdate, getFeaturedProperties } = require("../services/Properties.service");
 
 
 const getProperties = async (req, res) => {
@@ -192,4 +192,32 @@ const updateAvailability = async (req, res) => {
     }
 }
 
-module.exports = { getProperties, getUserProperties, createProperty, getUnverifiedProperties, deleteProperty, getDeletedProperties, updateProperty, approveProperty, getPropertyDetails, getPropertiesByCity, updateAvailability }
+
+const featuredProperties = async (req, res) => {
+    try {
+        const { limit } = req.body;
+        const featured = await getFeaturedProperties(limit);
+
+        if (!featured) {
+            return res.status(400).json({ message: 'Failed to load featured properties.' })
+        }
+        return res.status(200).json({ featuredProperties: featured })
+    } catch (error) {
+        return res.status(500).json({ message: error.message })
+    }
+}
+
+module.exports = {
+    getProperties,
+    getUserProperties,
+    createProperty,
+    getUnverifiedProperties,
+    deleteProperty,
+    getDeletedProperties,
+    updateProperty,
+    approveProperty,
+    getPropertyDetails,
+    getPropertiesByCity,
+    updateAvailability,
+    featuredProperties
+}

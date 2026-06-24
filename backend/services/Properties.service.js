@@ -498,6 +498,33 @@ const availabilityUpdate = async (propertyId, userId, availability) => {
 }
 
 
+const getFeaturedProperties = async (limit) => {
+    try {
+        const featuredProperties = await prisma.property.findMany({
+            where: {
+                verification_status: 'APPROVED'      // only show verified properties
+            },
+            orderBy: {
+                bookings: {
+                    _count: 'desc',
+                },
+            },
+            take: limit,
+            include: {
+                _count: {
+                    select: { bookings: true },
+                },
+            },
+        })
+
+        return featuredProperties;
+    } catch (error) {
+        console.log(error.message);
+        throw new Error(error.message || "Unable to load featured properties.");
+    }
+}
+
+
 module.exports = {
     getAllProperties,
     getUserProperty,
@@ -509,5 +536,6 @@ module.exports = {
     approveProp,
     propertyDetail,
     propertyByCity,
-    availabilityUpdate
+    availabilityUpdate,
+    getFeaturedProperties
 };
