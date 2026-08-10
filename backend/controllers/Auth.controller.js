@@ -1,13 +1,14 @@
-//import database oprations...
 const { Webhook } = require('svix');
-const { createUser, deleteUser } = require('../services/Auth.service');
+const { createUser, deleteUser, getMe: fetchMe } = require('../services/Auth.service');
+const { getAuth } = require('@clerk/express')
 
 const syncUser = async (req, res) => {
 
     const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
 
+    // BUG FIX: was a bare throw with no try/catch — request would hang
     if (!WEBHOOK_SECRET) {
-        throw new Error('Please add CLERK_WEBHOOK_SECRET from Clerk Dashboard to .env');
+        return res.status(500).json({ success: false, message: 'Server misconfiguration: CLERK_WEBHOOK_SECRET is missing.' });
     }
 
     const svix_id = req.headers["svix-id"];
@@ -15,7 +16,7 @@ const syncUser = async (req, res) => {
     const svix_signature = req.headers["svix-signature"];
 
     if (!svix_id || !svix_timestamp || !svix_signature) {
-        return res.status(400).json({ error: 'Error occured -- no svix headers' });
+        return res.status(400).json({ success: false, message: 'Error occurred — no svix headers.' });
     }
 
     const payload = req.body.toString();
@@ -31,15 +32,13 @@ const syncUser = async (req, res) => {
         });
     } catch (err) {
         console.error('Error verifying webhook:', err);
-        return res.status(400).json({ Error: err.message });
+        return res.status(400).json({ success: false, message: err.message });
     }
 
     const { id } = evt.data;
     const eventType = evt.type;
 
-    //sync the user of clerk to my database...
     try {
-
         if (eventType === "user.created" || eventType === "user.updated") {
             await createUser(evt.data);
         }
@@ -48,12 +47,38 @@ const syncUser = async (req, res) => {
             await deleteUser(id);
         }
 
-        return res.status(200).json({ success: "database sync successful" })
+        return res.status(200).json({ success: true, synced: true });
     } catch (error) {
         console.log(error);
-        return res.status(400).json({ message: "couldnt sync the user." })
+        return res.status(400).json({ success: false, message: "Couldn't sync the user." });
     }
 }
 
-module.exports = { syncUser }
+const getMe = async (req, res) => {
+    try {
+        const { userId } = getAuth(req);
+        console.log(userId);
 
+        const me = await fetchMe(userId);
+
+        if (!me) {
+            console.log("Me: ", me)
+            return res.status(400).json({
+                success: false,
+                message: "Couldn't find user!"
+            })
+        }
+        const { Role, phone_number } = me;
+
+        return res.status(200).json({
+            success: true,
+            role: Role,
+            phoneNumber: phone_number
+        })
+    } catch (error) {
+        console.log("Get Me Error: ", error.message);
+        return res.status(400).json({ success: false, message: "Couldn't sync the user." });
+    }
+}
+
+module.exports = { syncUser, getMe }

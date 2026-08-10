@@ -8,9 +8,9 @@ const raiseDispute = async (req, res) => {
         const { userId } = getAuth(req);
 
         const dispute = await raiseDisputeService(bookingId, userId, reason);
-        return res.status(201).json({ dispute: dispute });
+        return res.status(201).json({ success: true, dispute });
     } catch (error) {
-        return res.status(500).json({ error: error.message });
+        return res.status(500).json({ success: false, message: error.message });
     }
 }
 
@@ -18,23 +18,24 @@ const raiseDispute = async (req, res) => {
 const resolveDispute = async (req, res) => {
     try {
         const { disputeId } = req.params;
-        const { resolution, action } = req.body; // resolution can be "APPROVE" or "REJECT", action can be "REFUND" or "CONFIRMED"
+        const { resolution, action } = req.body;
 
-        const dispute = await resolveDisputeService(disputeId, resolution, action);
-        return res.status(200).json({ dispute: dispute.dispute, action: dispute.action });
+        const result = await resolveDisputeService(disputeId, resolution, action);
+        return res.status(200).json({ success: true, dispute: result.dispute, action: result.action });
     } catch (error) {
-        return res.status(500).json({ error: error.message });
+        return res.status(500).json({ success: false, message: error.message });
     }
 }
 
 
 const getAllDisputes = async (req, res) => {
     try {
-        const { page, limit } = req.body;
+        // BUG FIX: was `req.body` — pagination params must come from query string on GET requests
+        const { page, limit } = req.query;
         const disputes = await getAllDisputesService(page, limit);
-        return res.status(200).json({ disputes: disputes });
+        return res.status(200).json({ success: true, disputes });
     } catch (error) {
-        return res.status(500).json({ error: error.message });
+        return res.status(500).json({ success: false, message: error.message });
     }
 }
 

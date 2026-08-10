@@ -4,7 +4,8 @@
   "main": "index.js",
   "type": "commonjs",
   "scripts": {
-    "start": "nodemon server.js"
+    "start": "nodemon server.js",
+    "postinstall": "prisma generate"
   },
   "author": "",
   "license": "ISC",
@@ -13,6 +14,7 @@
     "@clerk/express": "^2.0.8",
     "@prisma/adapter-pg": "^7.6.0",
     "@prisma/client": "^7.6.0",
+    "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "nodemon": "^3.1.14",

@@ -5,14 +5,13 @@ const { raiseDispute, resolveDispute, getAllDisputes } = require('../controllers
 
 const router = express.Router();
 
+// get all disputes...
+router.get('/all', verifyRole(['ADMIN']), getAllDisputes);
+
 // raise dispute...
 router.post('/:bookingId', verifyRole(['GUEST', 'HOST']), raiseDispute);
 
 //resolve dispute...
 router.put('/:disputeId/resolve', verifyRole(['ADMIN']), resolveDispute);
-
-// get all disputes...
-router.get('/all', verifyRole(['ADMIN']), getAllDisputes);
-
 
 module.exports = router;

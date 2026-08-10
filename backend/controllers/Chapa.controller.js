@@ -7,24 +7,19 @@ const handleUpdate = async (req, res) => {
 
         if (status === "failed") {
             await failSuccessPayment(tx_ref, payment_method, false);
-            return res.status(200).json({ message: "Recorded as failed" });
+            return res.status(200).json({ success: true, message: "Recorded as failed." });
         }
 
         if (status === "success") {
             const { success } = await verifyAndUpdatePayment(tx_ref, payment_method);
 
-            if (success) {
-                //successful payment...
-                return res.status(200).json({ message: 'successfully synced.' })
-            } else {
-                //payment unsuccessful...
-                return res.status(200).json({ message: 'successfully synced.' })
-            }
+            return res.status(200).json({ success: true, message: success ? 'Payment verified and synced.' : 'Payment synced (verification failed).' });
         }
-        res.status(200).json({ message: 'nothing happened   .' });
+
+        return res.status(200).json({ success: true, message: 'No action taken.' });
     } catch (error) {
         console.error('Chapa Callback Error:', error.message);
-        return res.status(500).send('Internal Server Error.');
+        return res.status(500).json({ success: false, message: 'Internal server error.' });
     }
 }
 

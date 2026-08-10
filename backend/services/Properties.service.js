@@ -32,7 +32,12 @@ const getAllProperties = async (page, limit) => {
                         email: true,
                     }
                 },
-                propertyImages: true
+                propertyImages: {
+                    select: {
+                        property_id: true,
+                        image_url: true
+                    }
+                }
             },
             skip: skip,
             take: limit
@@ -124,7 +129,8 @@ const addNewProperty = async (property, userId) => {
                     createMany: {
                         data: property.property_images
                     }
-                }
+                },
+                amenities: property.amenities
             },
         })
 
@@ -190,7 +196,7 @@ const deleteUserProperty = async (hostId, id) => {
         return prisma.$transaction(async (tx) => {
 
             //get all bookings that needs a refund...
-            const bookings = tx.booking.findMany({
+            const bookings = await tx.booking.findMany({
                 where: {
                     property_id: id,
                     booking_status: "CONFIRMED",
@@ -204,7 +210,7 @@ const deleteUserProperty = async (hostId, id) => {
             })
 
             //create refund for each successful payments...
-            for (const booking in bookings) {
+            for (const booking of bookings) {
                 if (booking.payment) {
                     await tx.refund.create({
                         data: {
@@ -387,7 +393,12 @@ const propertyDetail = async (propertyId) => {
                 deleted_at: null
             },
             include: {
-                availabilities: true,
+                availabilities: {
+                    select: {
+                        available_from: true,
+                        available_to: true
+                    }
+                },
                 host: {
                     select: {
                         name: true,
@@ -396,7 +407,18 @@ const propertyDetail = async (propertyId) => {
                         is_verified_host: true
                     }
                 },
-                propertyImages: true
+                propertyImages: {
+                    select: {
+                        property_id: true,
+                        image_url: true,
+                        image_id: true
+                    }
+                },
+                _count: {
+                    select: {
+                        propertyImages: true
+                    }
+                }
             }
         })
         return property;
@@ -509,11 +531,16 @@ const getFeaturedProperties = async (limit) => {
                     _count: 'desc',
                 },
             },
-            take: limit,
+            take: Number(limit),
             include: {
                 _count: {
                     select: { bookings: true },
                 },
+                propertyImages: {
+                    select: {
+                        image_url: true
+                    }
+                }
             },
         })
 

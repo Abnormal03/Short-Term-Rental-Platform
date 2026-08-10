@@ -1,17 +1,12 @@
 import { create } from 'zustand';
 
-const useUser = create((set) => ({
-    user: localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')) : null,
-    setUser: (user) => {
-        set(() => {
-            localStorage.setItem('user', JSON.stringify(user));
-            return { user }
-        })
-    },
-    clearUser: () => {
-        localStorage.removeItem('user')
-        set({ user: null })
-    }
-}))
+const useUserStore = create((set) => ({
+    user: null,
+    role: null,
+    phoneNumber: null,
+    isLoaded: false,
+    setUser: (user, role, phoneNumber) => set({ user, role, phoneNumber, isLoaded: true }),
+    clearUser: () => set({ user: null, role: null, isLoaded: true }),
+}));
 
-export default useUser;
+export default useUserStore;

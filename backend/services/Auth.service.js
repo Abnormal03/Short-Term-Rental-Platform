@@ -46,4 +46,23 @@ const deleteUser = async (clerkId) => {
     }
 }
 
-module.exports = { createUser, deleteUser }
+const getMe = async (clerkId) => {
+    try {
+        const me = await prisma.user.findUnique({
+            where: {
+                Clerk_id: clerkId
+            },
+            select: {
+                Role: true,
+                phone_number: true
+            }
+        })
+
+        return me;
+    } catch (error) {
+        console.log("Get Me Service Error: ", error.message);
+        throw new Error('unable to get me.');
+    }
+}
+
+module.exports = { createUser, deleteUser, getMe }

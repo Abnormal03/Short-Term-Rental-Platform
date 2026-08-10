@@ -4,9 +4,9 @@ import Footer from './Footer'
 
 const PageShell = ({ children }) => {
     return (
-        <div className='min-h-screen flex flex-col bg-bg'>
+        <div className='min-h-screen flex flex-col bg-bg-2'>
             <Navbar />
-            <main className='flex-1'>
+            <main className='flex'>
                 {children}
             </main>
             <Footer />

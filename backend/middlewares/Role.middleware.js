@@ -3,9 +3,15 @@ const prisma = require('../config/db');
 
 const verifyRole = (Role) => {
     return async (req, res, next) => {
-        const { userId } = getAuth(req);
+        const { userId } = await getAuth(req);
 
         try {
+            if (!userId) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Authentication required!"
+                })
+            }
             const user = await prisma.user.findFirst({
                 where: {
                     Clerk_id: userId
@@ -13,16 +19,16 @@ const verifyRole = (Role) => {
             })
 
             if (!user) {
-                return res.status(404).json({ message: "user not found!" })
+                return res.status(404).json({ success: false, message: "user not found!" })
             }
             const authorized = Role.some((role) => role === user.Role)
             if (!authorized) {
-                return res.status(403).json({ message: "unauthorized access!" })
+                return res.status(403).json({ success: false, message: "unauthorized access!" })
             }
             next();
         } catch (error) {
-            console.log(error)
-            return res.status(403).json({ message: "unable to process user!" })
+            console.log(error.message)
+            return res.status(403).json({ success: false, message: "unable to process user!" })
         }
     }
 }

@@ -7,16 +7,16 @@ const updateUserRole = async (req, res) => {
         const { userId } = getAuth(req);
 
         if (role?.toUpperCase() === "ADMIN") {
-            return res.status(403).json({ message: 'You are not authorized to assign ADMIN role.' });
+            return res.status(403).json({ success: false, message: 'You are not authorized to assign the ADMIN role.' });
         }
 
         const updatedUser = await updateRole(userId, role, phoneNumber);
         if (!updatedUser) {
-            return res.status(404).json({ message: 'User not found' });
+            return res.status(404).json({ success: false, message: 'User not found.' });
         }
-        res.status(200).json({ user: updatedUser });
+        return res.status(200).json({ success: true, user: updatedUser });
     } catch (error) {
-        res.status(500).json({ message: error.message || 'Failed to update user.' });
+        return res.status(500).json({ success: false, message: error.message || 'Failed to update user.' });
     }
 }
 
@@ -27,11 +27,11 @@ const getAllUsers = async (req, res) => {
         const { users, count } = await getAllUsersFromDB(userId, page, limit);
 
         if (!users) {
-            return res.status(404).json({ message: 'No users found' });
+            return res.status(404).json({ success: false, message: 'No users found.' });
         }
-        res.status(200).json({ users: users, count });
+        return res.status(200).json({ success: true, users, count });
     } catch (error) {
-        res.status(500).json({ message: error.message || 'Failed to get all users.' });
+        return res.status(500).json({ success: false, message: error.message || 'Failed to get all users.' });
     }
 }
 
@@ -43,28 +43,13 @@ const verifyHost = async (req, res) => {
         const updatedUser = await getVerifiedHost(userId, verified);
 
         if (!updatedUser) {
-            return res.status(404).json({ message: 'User not found' });
+            return res.status(404).json({ success: false, message: 'User not found.' });
         }
-        res.status(200).json({ user: updatedUser });
+        return res.status(200).json({ success: true, user: updatedUser });
     } catch (error) {
-        res.status(500).json({ message: error.message || 'Failed to verify host.' });
+        return res.status(500).json({ success: false, message: error.message || 'Failed to verify host.' });
     }
 }
-
-// const deleteUser = async (req, res) => {
-//     try {
-//         const { userId } = req.body;
-
-//         const deletedUser = await deleteUserFromDb(userId);
-
-//         if (!deletedUser) {
-//             return res.status(404).json({ message: 'User not found' });
-//         }
-//         res.status(200).json({ message: 'User deleted successfully', user: deletedUser });
-//     } catch (error) {
-//         res.status(500).json({ message: error.message || 'Failed to delete user.' });
-//     }
-// }
 
 
 const getUserProfile = async (req, res) => {
@@ -73,27 +58,27 @@ const getUserProfile = async (req, res) => {
         const user = await userProfile(userId);
 
         if (!user) {
-            return res.status(404).json({ message: 'User not found' });
+            return res.status(404).json({ success: false, message: 'User not found.' });
         }
-        res.status(200).json({ user: user });
+        return res.status(200).json({ success: true, user });
     } catch (error) {
-        res.status(500).json({ message: error.message || 'Failed to get user profile.' });
+        return res.status(500).json({ success: false, message: error.message || 'Failed to get user profile.' });
     }
 }
 
 const updateUserProfile = async (req, res) => {
     try {
         const { userId } = getAuth(req);
-        const updates = req.body; // exprecting an object with fields to update... {name, phone_number}
+        const updates = req.body;
 
         const updatedUser = await updateUser(userId, updates);
 
         if (!updatedUser) {
-            return res.status(404).json({ message: 'User not found' });
+            return res.status(404).json({ success: false, message: 'User not found.' });
         }
-        res.status(200).json({ user: updatedUser });
+        return res.status(200).json({ success: true, user: updatedUser });
     } catch (error) {
-        res.status(500).json({ message: error.message || 'Failed to update user profile.' });
+        return res.status(500).json({ success: false, message: error.message || 'Failed to update user profile.' });
     }
 }
 
@@ -104,11 +89,11 @@ const getHostProfile = async (req, res) => {
         const user = await hostProfile(hostId);
 
         if (!user) {
-            return res.status(404).json({ message: 'Host not found' });
+            return res.status(404).json({ success: false, message: 'Host not found.' });
         }
-        res.status(200).json({ user: user });
+        return res.status(200).json({ success: true, user });
     } catch (error) {
-        res.status(500).json({ message: error.message || 'Failed to get host profile.' });
+        return res.status(500).json({ success: false, message: error.message || 'Failed to get host profile.' });
     }
 }
 
@@ -121,11 +106,11 @@ const updatePreference = async (req, res) => {
         const updatedUser = await updatePref(userId, language);
 
         if (!updatedUser) {
-            return res.status(404).json({ message: 'User not found' });
+            return res.status(404).json({ success: false, message: 'User not found.' });
         }
-        res.status(200).json({ preference: updatedUser });
+        return res.status(200).json({ success: true, preference: updatedUser });
     } catch (error) {
-        res.status(500).json({ message: error.message || 'Failed to update language preference.' });
+        return res.status(500).json({ success: false, message: error.message || 'Failed to update language preference.' });
     }
 }
 
@@ -137,5 +122,4 @@ module.exports = {
     updateUserProfile,
     getHostProfile,
     updatePreference
-    // deleteUser
 }

@@ -89,7 +89,7 @@ const resolveDisputeService = async (disputeId, resolution, action) => {
                 resolution: action
             }
 
-            const udpatedDispute = await tx.dispute.update({
+            const updatedDispute = await tx.dispute.update({
                 where: {
                     id: disputeId
                 },
@@ -105,7 +105,7 @@ const resolveDisputeService = async (disputeId, resolution, action) => {
 
             //refund if refund the update booking status to refunded and update payment status to refunded as well...
             if (action === "REFUND") {
-                const tx_ref = udpatedDispute.booking.payment.transaction_reference;
+                const tx_ref = updatedDispute.booking.payment.transaction_reference;
                 const refunded = await refund(tx_ref);
 
                 console.log("refunded: ", refunded)

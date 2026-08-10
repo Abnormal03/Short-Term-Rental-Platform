@@ -1,4 +1,4 @@
-const { createBooking, cancelBook, propertyBookings, paymentSuccessfulFail, attachTransactionRef, confirmedBookings, guestBookings, bookingDetail } = require("../services/Booking.service")
+const { createBooking, cancelBook, propertyBookings, paymentSuccessfulFail, attachTransactionRef, confirmedBookings, guestBookings, bookingDetail } = require("../services/Booking.service");
 const { getAuth } = require('@clerk/express');
 const { initializePayment } = require("../services/Chapa.service");
 
@@ -7,28 +7,29 @@ const addBooking = async (req, res) => {
         const { propertyId } = req.params;
         const { userId } = getAuth(req);
         const { booking, paymentDetail } = req.body;
+
         if (!booking || !booking.checkInDate || !booking.checkOutDate || !booking.totalPrice || !booking.paymentMethod || !paymentDetail) {
-            return res.status(400).json({ message: 'Full information is required.' })
+            return res.status(400).json({ success: false, message: 'Full information is required.' });
         }
 
-        const NewBooking = await createBooking(booking, userId, propertyId);
+        const newBooking = await createBooking(booking, userId, propertyId);
 
-        if (!NewBooking) {
-            return res.status(400).json({ message: 'Unable to book property.' })
+        if (!newBooking) {
+            return res.status(400).json({ success: false, message: 'Unable to book property.' });
         }
-        //initialize payment..
+
         const initialize = await initializePayment(paymentDetail);
 
-        //if payment fails, fail both booking and payment
         if (!initialize.success) {
-            await paymentSuccessfulFail(NewBooking.booking_id, 'unsuccessful', false);
+            await paymentSuccessfulFail(newBooking.booking_id, 'unsuccessful', false);
             throw new Error(initialize.message || 'Payment Failed.');
         }
-        const paymentUpdated = await attachTransactionRef(NewBooking.booking_id, NewBooking.payment.payment_id, initialize.tx_ref)
 
-        return res.status(200).json({ booking: paymentUpdated, checkout_url: initialize.checkout_url });
+        const paymentUpdated = await attachTransactionRef(newBooking.booking_id, newBooking.payment.payment_id, initialize.tx_ref);
+
+        return res.status(200).json({ success: true, booking: paymentUpdated, checkout_url: initialize.checkout_url });
     } catch (error) {
-        return res.status(500).json({ message: error.message })
+        return res.status(500).json({ success: false, message: error.message });
     }
 }
 
@@ -36,16 +37,17 @@ const addBooking = async (req, res) => {
 const cancelBooking = async (req, res) => {
     try {
         const { bookingId } = req.params;
-        const body = req.body ? req.body : null
+        // BUG FIX: `body` could be null, then `body.reason` throws a TypeError — use optional chaining
+        const reason = req.body?.reason ?? null;
 
-        const canceledBooking = await cancelBook(bookingId, body.reason || null)
+        const canceledBooking = await cancelBook(bookingId, reason);
 
         if (canceledBooking) {
-            return res.status(200).json({ canceledBooking: canceledBooking })
+            return res.status(200).json({ success: true, canceledBooking });
         }
-        return res.status(400).json({ message: 'Unable to cancel Booking.' })
+        return res.status(400).json({ success: false, message: 'Unable to cancel booking.' });
     } catch (error) {
-        return res.status(500).json({ message: error.message })
+        return res.status(500).json({ success: false, message: error.message });
     }
 }
 
@@ -58,11 +60,11 @@ const getPropertyBookings = async (req, res) => {
         const { bookings, count } = await propertyBookings(propertyId, page, limit);
 
         if (bookings) {
-            return res.status(200).json({ bookings: bookings, count })
+            return res.status(200).json({ success: true, bookings, count });
         }
-        return res.status(400).json({ message: 'Something Happened while fetching Bookings.' })
+        return res.status(400).json({ success: false, message: 'Something went wrong while fetching bookings.' });
     } catch (error) {
-        return res.status(500).json({ message: error.message })
+        return res.status(500).json({ success: false, message: error.message });
     }
 }
 
@@ -75,11 +77,11 @@ const getConfirmedBookings = async (req, res) => {
         const { bookings, count } = await confirmedBookings(propertyId, userId, page, limit);
 
         if (bookings) {
-            return res.status(200).json({ bookings, count })
+            return res.status(200).json({ success: true, bookings, count });
         }
-        return res.status(400).json({ message: 'Something Happened while fetching Bookings.' })
+        return res.status(400).json({ success: false, message: 'Something went wrong while fetching bookings.' });
     } catch (error) {
-        return res.status(500).json({ message: error.message })
+        return res.status(500).json({ success: false, message: error.message });
     }
 }
 
@@ -93,16 +95,15 @@ const paymentSuccessFail = async (req, res) => {
         const updatedBooking = await paymentSuccessfulFail(bookingId, success);
 
         if (updatedBooking) {
-            return res.status(200).json({ updatedBooking: updatedBooking });
+            return res.status(200).json({ success: true, updatedBooking });
         }
 
-        return res.status(400).json({ message: 'Unable to update Payment.' })
+        return res.status(400).json({ success: false, message: 'Unable to update payment status.' });
     } catch (error) {
-        return res.status(500).json({ message: error.message })
+        return res.status(500).json({ success: false, message: error.message });
     }
 }
 
-//get my booking for guest
 const myBookings = async (req, res) => {
     try {
         const { userId } = getAuth(req);
@@ -110,11 +111,11 @@ const myBookings = async (req, res) => {
         const bookings = await guestBookings(userId);
 
         if (bookings) {
-            return res.status(200).json({ bookings: bookings })
+            return res.status(200).json({ success: true, bookings });
         }
-        return res.status(400).json({ message: 'Unable to fetch Bookings.' })
+        return res.status(400).json({ success: false, message: 'Unable to fetch bookings.' });
     } catch (error) {
-        return res.status(500).json({ message: error.message })
+        return res.status(500).json({ success: false, message: error.message });
     }
 }
 
@@ -126,11 +127,11 @@ const guestDetailBooking = async (req, res) => {
         const booking = await bookingDetail(bookingId, userId);
 
         if (booking) {
-            return res.status(200).json({ booking: booking })
+            return res.status(200).json({ success: true, booking });
         }
-        return res.status(400).json({ message: 'Unable to fetch Booking.' })
+        return res.status(400).json({ success: false, message: 'Unable to fetch booking.' });
     } catch (error) {
-        return res.status(500).json({ message: error.message })
+        return res.status(500).json({ success: false, message: error.message });
     }
 }
 

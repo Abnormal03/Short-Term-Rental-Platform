@@ -10,12 +10,12 @@ const initializePayment = async (paymentDetail) => {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                "amount": "10",
+                "amount": (paymentDetail?.price).toString(),
                 "currency": "ETB",
-                "email": "abrhamteshe321@gmail.com",
-                "first_name": "Abrham",
-                "last_name": "Teshome",
-                "phone_number": "0963989890",
+                "email": paymentDetail?.email.toString(),
+                "first_name": paymentDetail?.first_name,
+                "last_name": paymentDetail?.last_name,
+                "phone_number": paymentDetail.phone_number,
                 "tx_ref": transactionRef,
                 "callback_url": process.env.CHAPA_CALLBACK_URL,
                 "return_url": process.env.CHAPA_RETURN_URL,
@@ -82,10 +82,9 @@ const verifyAndUpdatePayment = async (tx_ref, payment_method) => {
             await failSuccessPayment(tx_ref, payment_method, true);
 
             return { success: true }
-            if (!verification.ok) {
-                throw new Error('Error while verifying payment!');
-            }
         }
+
+        throw new Error('Error while verifying payment!');
     } catch (error) {
         throw new Error(error.message);
     }

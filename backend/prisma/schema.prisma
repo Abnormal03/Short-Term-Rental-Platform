@@ -50,6 +50,7 @@ model Property {
   price_per_night     Float
   min_stay_duration   Int
   max_stay_duration   Int
+  amenities           String[]
   verification_status VerificationStatus @default(PENDING)
   host                User               @relation(fields: [host_id], references: [user_id])
   host_id             String

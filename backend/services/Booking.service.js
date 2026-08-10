@@ -245,7 +245,7 @@ const confirmedBookings = async (propertyId, clerkId, page, limit) => {
             take: limit
         });
 
-        const count = prisma.booking.count({
+        const count = await prisma.booking.count({
             where: {
                 property_id: propertyId,
                 property: {
