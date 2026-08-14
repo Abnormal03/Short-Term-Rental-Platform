@@ -48,6 +48,21 @@ app.get('/', (req, res) => {
     return res.status(200).json({ success: true, message: 'Server is running.' });
 });
 
+app.use((req, res, next) => {
+    const error = new Error(`Route not found - ${req.originalUrl}`);
+    error.status = 404;
+    next(error);
+});
+
+app.use((err, req, res, next) => {
+    console.error(`[ERROR] ${req.method} ${req.url}:`, err);
+    const statusCode = err.status || 500;
+    res.status(statusCode).json({
+        success: false,
+        message: err.message || 'Internal Server Error',
+    });
+});
+
 app.listen(process.env.PORT, () => {
     console.log('Listening on port:', process.env.PORT);
 });
