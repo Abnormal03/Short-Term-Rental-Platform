@@ -1,5 +1,20 @@
 const prisma = require("../config/db");
 
+
+const handleChapaCallback = async (req, res) => {
+    const { trx_ref, status } = req.query
+
+    console.log('Chapa callback received:', { trx_ref, status })
+
+    if (status === 'success') {
+        // redirect user to your frontend success page
+        return res.redirect(`${process.env.FRONTEND_URL}/payment/success?trx_ref=${trx_ref}`)
+    }
+
+    // redirect to failure page
+    return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?trx_ref=${trx_ref}`)
+}
+
 const initializePayment = async (paymentDetail) => {
     try {
         const transactionRef = `rental-${Date.now()}`;
