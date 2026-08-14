@@ -51,7 +51,7 @@ const failSuccessPayment = async (transactionRef, payment_method, success) => {
             },
             data: {
                 payment_status: success ? "COMPLETED" : "FAILED",
-                payment_method: payment_method, //get it from chapa
+                payment_method: payment_method,
                 booking: {
                     update: {
                         booking_status: success ? "CONFIRMED" : "CANCELLED",
@@ -61,7 +61,7 @@ const failSuccessPayment = async (transactionRef, payment_method, success) => {
             include: {
                 booking: true
             }
-        })
+        });
 
         return payment;
     } catch (error) {
@@ -69,27 +69,25 @@ const failSuccessPayment = async (transactionRef, payment_method, success) => {
             console.error(`No payment found for reference: ${transactionRef}`);
             throw new Error('Transaction reference not found in database.');
         }
-        console.log(error.message);
-        throw new Error(error.message || 'Failed to Update Payment.')
+        console.error("Database Update Error:", error.message);
+        throw new Error(error.message || 'Failed to Update Payment.');
     }
-}
+};
 
 const verifyAndUpdatePayment = async (tx_ref, payment_method) => {
     try {
         const verificationData = await verifyPayment(tx_ref);
 
-        if (verificationData.status === 'success' && verificationData.data.status === 'success') {
+        if (verificationData.status === 'success' && verificationData.data?.status === 'success') {
             await failSuccessPayment(tx_ref, payment_method, true);
-
-            return { success: true }
+            return { success: true };
         }
 
-        throw new Error('Error while verifying payment!');
+        throw new Error('Error while verifying payment status from Chapa!');
     } catch (error) {
         throw new Error(error.message);
     }
-}
-
+};
 const refund = async (tx_ref) => {
     try {
         //verify the transaction...
@@ -123,21 +121,22 @@ const refund = async (tx_ref) => {
 const verifyPayment = async (tx_ref) => {
     try {
         const response = await fetch(`https://api.chapa.co/v1/transaction/verify/${tx_ref}`, {
+            method: 'GET',
             headers: {
                 Authorization: `Bearer ${process.env.CHAPA_SECRET_KEY}`
             }
-        })
+        });
 
         if (!response.ok) {
-            throw new Error('Chapa Payment Verification Failed.')
+            throw new Error(`Chapa Verification Failed with HTTP status ${response.status}`);
         }
 
         const verification = await response.json();
         return verification;
     } catch (error) {
-        throw new Error(error.message || 'Failed to verify Payment.')
+        throw new Error(error.message || 'Failed to verify Payment.');
     }
-}
+};
 
 
 module.exports = { initializePayment, failSuccessPayment, verifyAndUpdatePayment, refund }
