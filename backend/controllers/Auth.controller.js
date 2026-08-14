@@ -57,7 +57,6 @@ const syncUser = async (req, res) => {
 const getMe = async (req, res) => {
     try {
         const { userId } = getAuth(req);
-        console.log(userId);
 
         const me = await fetchMe(userId);
 

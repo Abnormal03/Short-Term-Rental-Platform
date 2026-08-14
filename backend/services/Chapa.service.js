@@ -10,7 +10,7 @@ const initializePayment = async (paymentDetail) => {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                "amount": (paymentDetail?.price).toString(),
+                "amount": paymentDetail?.price?.toString(),
                 "currency": "ETB",
                 "email": paymentDetail?.email.toString(),
                 "first_name": paymentDetail?.first_name,
@@ -37,7 +37,7 @@ const initializePayment = async (paymentDetail) => {
         return { success: false, message: json.message, tx_ref: json.tx_ref };
 
     } catch (error) {
-        console.log(error.message)
+        console.log("Initialize Boking Error: ", error.message)
         throw new Error(error.message || 'Failed to Initialize Payment.');
     }
 }

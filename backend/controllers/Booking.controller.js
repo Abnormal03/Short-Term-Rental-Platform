@@ -27,7 +27,7 @@ const addBooking = async (req, res) => {
 
         const paymentUpdated = await attachTransactionRef(newBooking.booking_id, newBooking.payment.payment_id, initialize.tx_ref);
 
-        return res.status(200).json({ success: true, booking: paymentUpdated, checkout_url: initialize.checkout_url });
+        return res.status(200).json({ success: true, booking: paymentUpdated, checkout_url: initialize.checkout_url.checkout_url });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });
     }
