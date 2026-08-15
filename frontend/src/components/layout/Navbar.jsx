@@ -7,7 +7,7 @@ import { useUser as useClerkUser, useClerk } from "@clerk/clerk-react";
 import useUserStore from "../../store/useUser";
 
 const GuestNavbar = () => {
-    const {signOut} = useClerk()
+    const { signOut } = useClerk()
     const { isSignedIn } = useClerkUser();
     const { user } = useUserStore();
     const { language, toggleLanguage } = useLanguageStore();
@@ -39,16 +39,16 @@ const GuestNavbar = () => {
                     <div className="flex items-center gap-3">
                         <NavLink to={'/profile'}>
                             <div className="flex items-center gap-2">
-                                <User className="border-2 rounded-full size-9 p-1 text-primary" />  
-                                <p>{user?.firstName}</p>
+                                <User className="border-2 rounded-full size-9 p-1 text-primary" />
+                                <p className="hidden sm:block">{user?.firstName}</p>
                             </div>
                         </NavLink>
-                        <NavLink><Button variant="outline" onClick={()=>{signOut()}}><LogOut /></Button></NavLink>
+                        <NavLink className={"hidden sm:block"}><Button variant="outline" onClick={() => { signOut() }}><LogOut /></Button></NavLink>
                     </div>
-                     :
+                    :
                     <div className="items-center gap-3 hidden sm:flex">
-                        <NavLink to={'/sign-in'}><Button variant="outline">Login</Button></NavLink> 
-                        <NavLink to={'/sign-up'}><Button variant="primary">Sign Up</Button></NavLink> 
+                        <NavLink to={'/sign-in'}><Button variant="outline">Login</Button></NavLink>
+                        <NavLink to={'/sign-up'}><Button variant="primary">Sign Up</Button></NavLink>
                     </div>}
 
             </div>
