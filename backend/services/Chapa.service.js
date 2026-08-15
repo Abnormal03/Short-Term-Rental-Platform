@@ -25,7 +25,7 @@ const initializePayment = async (paymentDetail) => {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                "amount": paymentDetail?.price?.toString(),
+                "amount": paymentDetail?.price,
                 "currency": "ETB",
                 "email": paymentDetail?.email.toString(),
                 "first_name": paymentDetail?.first_name,
@@ -39,9 +39,9 @@ const initializePayment = async (paymentDetail) => {
             })
         })
 
-        if (!response.ok) {
-            throw new Error('Unable to initialize payment.')
-        }
+        // if (!response.ok) {
+        //     return { success: false, message: "Error Initializing Payment." }
+        // }
 
         const json = await response.json();
 

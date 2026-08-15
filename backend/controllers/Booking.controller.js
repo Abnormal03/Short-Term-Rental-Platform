@@ -21,7 +21,7 @@ const addBooking = async (req, res) => {
         const initialize = await initializePayment(paymentDetail);
 
         if (!initialize.success) {
-            await paymentSuccessfulFail(newBooking.booking_id, 'unsuccessful', false);
+            await paymentSuccessfulFail(newBooking.booking_id, false);
             throw new Error(initialize.message || 'Payment Failed.');
         }
 
