@@ -39,11 +39,14 @@ const initializePayment = async (paymentDetail) => {
             })
         })
 
-        // if (!response.ok) {
-        //     return { success: false, message: "Error Initializing Payment." }
-        // }
+        const json = await response.json().catch(() => null);
 
-        const json = await response.json();
+        if (!response.ok || !json) {
+            return {
+                success: false,
+                message: json?.message || `Error Initializing Payment (HTTP ${response.status}).`
+            };
+        }
 
         if (json.status === "success") {
             return { success: true, checkout_url: json.data, tx_ref: transactionRef };

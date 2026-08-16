@@ -10,7 +10,7 @@ const adapter = new PrismaPg({
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,  // increase to 10s to handle Neon cold starts
     ssl: process.env.NODE_ENV === 'production'
-        ? { rejectUnauthorized: false }
+        ? { rejectUnauthorized: true }
         : false,
 })
 

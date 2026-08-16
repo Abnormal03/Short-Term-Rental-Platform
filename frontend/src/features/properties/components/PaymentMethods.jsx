@@ -3,7 +3,7 @@ import { Modal } from "../../../components/UI/Modal";
 import { Smartphone, Wallet, Landmark, Banknote, Lock } from "lucide-react";
 import Button from "../../../components/UI/Botton";
 import { useUser } from "@clerk/clerk-react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import { Spinner } from "../../../components/UI/Spinner";
 import useInitializeBooking from "../../booking/hooks/useInitializeBooking";
 import useUserStore from "../../../store/useUser";
@@ -25,6 +25,11 @@ const PaymentMethods = ({ paymentMethods, setPaymentMethods, checkIn, checkOut, 
             return;
         }
         setTried(true);
+        if (!phoneNumber || !user?.primaryEmailAddress?.emailAddress) {
+            setLoginError(true);
+            setPaymentMethods(false);
+            return;
+        }
 
         initializeBooking(
             {
@@ -32,7 +37,7 @@ const PaymentMethods = ({ paymentMethods, setPaymentMethods, checkIn, checkOut, 
                     checkInDate: new Date(checkIn),
                     checkOutDate: new Date(checkOut),
                     totalPrice: Number(total),
-                    paymentMethod: "telebirr",
+                    paymentMethod: selectedPaymentMethod,
                 },
                 paymentDetails: {
                     price: Number(total),
@@ -42,23 +47,18 @@ const PaymentMethods = ({ paymentMethods, setPaymentMethods, checkIn, checkOut, 
                     phone_number: phoneNumber,
                 },
                 propertyId,
-            },
-            {
-                onSuccess: (data) => {
-                    setPaymentMethods(false);
-                    const checkoutUrl = data?.checkout_url;
-                    console.log(data);
+            }, {
+            onSuccess: (data) => {
+                setPaymentMethods(false);
+                const checkoutUrl = data?.checkout_url;
 
-                    if (checkoutUrl) {
-                        window.location.href = checkoutUrl;
-                        if (checkoutUrl.startsWith("https")) {
-                            window.location.href = checkoutUrl;
-                        } else {
-                            navigate(checkoutUrl);
-                        }
-                    }
-                },
-            }
+                if (checkoutUrl?.startsWith("https://")) {
+                    window.location.href = checkoutUrl;
+                } else {
+                    setLoginError(false);
+                }
+            },
+        }
         );
     };
 

@@ -37,13 +37,18 @@ const GuestNavbar = () => {
                 </div>
                 {isSignedIn ?
                     <div className="flex items-center gap-3">
-                        <NavLink to={'/profile'}>
+                        <NavLink to={'/profile'} aria-label={user?.firstName ? `Profile, ${user.firstName}` : 'Profile'}>
                             <div className="flex items-center gap-2">
-                                <User className="border-2 rounded-full size-9 p-1 text-primary" />
+                                <User aria-hidden="true" className="border-2 rounded-full size-9 p-1 text-primary" />
                                 <p className="hidden sm:block">{user?.firstName}</p>
+                                <span className="sr-only">{user?.firstName ? `Profile for ${user.firstName}` : 'Profile'}</span>
                             </div>
                         </NavLink>
-                        <NavLink className={"hidden sm:block"}><Button variant="outline" onClick={() => { signOut() }}><LogOut /></Button></NavLink>
+                        <div className="hidden sm:block">
+                            <Button aria-label="Log out" variant="outline" onClick={() => signOut()}>
+                                <LogOut aria-hidden="true" />
+                            </Button>
+                        </div>
                     </div>
                     :
                     <div className="items-center gap-3 hidden sm:flex">

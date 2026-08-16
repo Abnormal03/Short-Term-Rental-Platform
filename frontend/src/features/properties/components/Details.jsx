@@ -58,14 +58,15 @@ const Details = () => {
     }, [checkIn, checkOut, guests]);
 
     useEffect(() => {
+        if (!nights || !property) return;
         if (nights > Number(property?.max_stay_duration)) {
             setInternalError("Maxinum Stay For This Property Is " + `${property?.max_stay_duration}.`);
             setIsAllSet(false);
-        } else if (nights < property?.min_stay_duration) {
+        } else if (nights < Number(property?.min_stay_duration)) {
             setInternalError("Minimum Stay For This Property Is " + `${property?.min_stay_duration}.`);
             setIsAllSet(false);
         }
-    }, [nights])
+    }, [nights, property])
 
     if (isLoading) {
         return (
@@ -88,7 +89,8 @@ const Details = () => {
         )
     }
 
-    const mainImg = property?.propertyImages[0]?.image_url || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?q=80&w=2000&auto=format&fit=crop'
+    const propertyImages = property?.propertyImages ?? [];
+    const mainImg = propertyImages[0]?.image_url || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?q=80&w=2000&auto=format&fit=crop'
     return (
         <PageShell>
             <Contact showUserInfo={showUserInfo} setShowUserInfo={setShowUserInfo} property={property} />
@@ -103,11 +105,10 @@ const Details = () => {
                     </div>
                     {/*The rest of the Image*/}
                     <div className="hidden md:grid grid-cols-2 gap-4 h-full">
-                        {property?.propertyImages.map((img, index) => (
-                            index === 0 ? <></> :
-                                <div className='bg-gray-200 rounded-2xl overflow-hidden' key={img.image_id}>
-                                    <img src={img.image_url} alt="property_Image" />
-                                </div>
+                        {propertyImages.slice(1).map((img) => (
+                            <div className='bg-gray-200 rounded-2xl overflow-hidden' key={img.image_id}>
+                                <img src={img.image_url} alt="property_Image" className="w-full h-full object-cover" />
+                            </div>
                         ))}
                     </div>
                 </div>
@@ -204,7 +205,7 @@ const Details = () => {
                                         <label className="block text-[10px] font-bold text-gray-800 uppercase mb-1">Guests</label>
                                         {/* <div className="text-sm text-gray-900">2 guests</div> */}
                                         <div className='flex justify-between items-center w-full gap-5 '>
-                                            <Input placeholder='Guests' onChange={(e) => { setGuests(e.target.value) }} value={guests} type='number' className={"bg-bg-2"} />
+                                            <Input placeholder='Guests' onChange={(e) => { setGuests(Number(e.target.value)) }} value={guests} min={1} type='number' className={"bg-bg-2"} />
                                         </div>
                                     </div>
                                 </div>
