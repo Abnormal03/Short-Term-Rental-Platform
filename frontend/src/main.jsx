@@ -10,11 +10,11 @@ document.documentElement.classList.toggle('dark', saved === 'dark');
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ClerkProvider
-    signUpUrl='/sign-up'
-    signInUrl='/sign-in'
-    signInFallbackRedirectUrl="/"
-    signUpFallbackRedirectUrl="/"
-    publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY}
+      signUpUrl='/sign-up'
+      signInUrl='/sign-in'
+      signInFallbackRedirectUrl="/"
+      signUpFallbackRedirectUrl="/complete-profile"
+      publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY}
     >
       <App />
     </ClerkProvider>

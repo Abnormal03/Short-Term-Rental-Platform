@@ -37,11 +37,12 @@ app.use(express.json());
 // Properties route (public)
 app.use('/api/v1/properties', propertyRoutes);
 
+app.use(clerkMiddleware());
 // Protected routes
-app.use('/api/v1/auth', requireAuth(), AuthRoute)
-app.use('/api/v1/bookings', requireAuth(), bookingRoutes);
-app.use('/api/v1/users', requireAuth(), userRoutes);
-app.use('/api/v1/disputes', requireAuth(), disputeRoutes);
+app.use('/api/v1/auth', AuthRoute)
+app.use('/api/v1/bookings', bookingRoutes);
+app.use('/api/v1/users', userRoutes);
+app.use('/api/v1/disputes', disputeRoutes);
 
 // Health check
 app.get('/', (req, res) => {

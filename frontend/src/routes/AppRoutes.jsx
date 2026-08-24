@@ -7,6 +7,7 @@ import LandingPage from '../pages/LandingPage'
 
 import PropertyDetails from '../pages/PropertyDetails'
 import SignUpPage from '../pages/Auth/Signup'
+import CompleteProfileForm from '../features/profile/components/CompleteProfile'
 
 const AppRoutes = () => {
     return (
@@ -16,6 +17,7 @@ const AppRoutes = () => {
                     <Route path='/' element={<DashboardShell />} />
                     <Route path='/explore' element={<LandingPage />} />
                     <Route path='/properties/:id' element={<PropertyDetails />} />
+                    <Route path='/complete-profile' element={<CompleteProfileForm />} />
                 </Routes>
             </SignedIn>
             <SignedOut >
