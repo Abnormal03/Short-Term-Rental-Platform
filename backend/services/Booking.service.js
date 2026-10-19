@@ -29,11 +29,15 @@ const createBooking = async (booking, clerkId, propertyId) => {
             const checkOut = new Date(booking.checkOutDate);
             const durationInDays = (checkOut - checkIn) / (1000 * 60 * 60 * 24);
 
-            if (durationInDays < property.min_stay_duration || durationInDays > property.max_stay_duration) {
+            if (!Number.isInteger(durationInDays) || durationInDays <= 0 ||
+                durationInDays < property.min_stay_duration || durationInDays > property.max_stay_duration) {
                 throw new Error(`Stay duration must be between ${property.min_stay_duration} and ${property.max_stay_duration} days.`);
             }
 
             //Check General Availability Range...
+            if (!property.availabilities) {
+                throw new Error('Property availability has not been configured.');
+            }
             const { available_from, available_to } = property.availabilities;
             if (checkIn < new Date(available_from) || checkOut > new Date(available_to)) {
                 throw new Error('Property is not available for these dates.');
@@ -56,6 +60,8 @@ const createBooking = async (booking, clerkId, propertyId) => {
                     Clerk_id: clerkId
                 }
             })
+            if (!user) throw new Error('Guest account not found.');
+            const totalPrice = Number((durationInDays * property.price_per_night).toFixed(2));
             //Create Booking....
             return await tx.booking.create({
                 data: {
@@ -63,11 +69,11 @@ const createBooking = async (booking, clerkId, propertyId) => {
                     user_id: user.user_id,
                     check_in_date: checkIn,
                     check_out_date: checkOut,
-                    total_price: booking.totalPrice,
+                    total_price: totalPrice,
                     payment: {
                         create: {
                             payment_method: booking.paymentMethod,
-                            amount: booking.totalPrice
+                            amount: totalPrice
                         }
                     }
                 },
@@ -82,7 +88,7 @@ const createBooking = async (booking, clerkId, propertyId) => {
     }
 };
 
-const cancelBook = async (bookingId, reason) => {
+const cancelBook = async (bookingId, clerkId, reason) => {
     try {
         //fetch booking...
         const booking = await prisma.$transaction(async (tx) => {
@@ -90,11 +96,13 @@ const cancelBook = async (bookingId, reason) => {
             const booking = await tx.booking.findUnique({
                 where: { booking_id: bookingId },
                 include: {
-                    payment: true
+                    payment: { include: { refund: true } },
+                    user: { select: { Clerk_id: true } }
                 }
             });
 
             if (!booking) throw new Error("Booking not found");
+            if (booking.user.Clerk_id !== clerkId) throw new Error('You can only cancel your own booking.');
 
             if (["CANCELLED", "COMPLETED"].includes(booking.booking_status)) {
                 throw new Error("Booking not cancellable");
@@ -117,7 +125,7 @@ const cancelBook = async (bookingId, reason) => {
             throw new Error('Unable to find Booking.')
         }
 
-        if (booking.payment.refund > 0) {
+        if (booking.payment?.refund) {
             throw new Error("Already refunded");
         }
 
@@ -127,7 +135,7 @@ const cancelBook = async (bookingId, reason) => {
 
         // refund in chapa if illigable...
         let refundDetail;
-        if (isElligible && booking.payment.payment_status === 'COMPLETED') {
+        if (isElligible && booking.payment?.payment_status === 'COMPLETED') {
             refundDetail = await chapaRefund(booking.payment.transaction_reference);
 
             if (!refundDetail.success) {
@@ -137,7 +145,7 @@ const cancelBook = async (bookingId, reason) => {
 
         const result = await prisma.$transaction(async (tx) => {
             // create refund if elligable...
-            if (isElligible) {
+            if (refundDetail?.success && booking.payment) {
                 await tx.payment.update({
                     where: {
                         payment_id: booking.payment.payment_id
@@ -148,14 +156,14 @@ const cancelBook = async (bookingId, reason) => {
                 })
             }
 
-            if (refundDetail && refundDetail.success) {
+            if (refundDetail?.success && booking.payment) {
                 await tx.refund.create({
                     data: {
                         payment_id: booking.payment.payment_id,
                         reason: reason,
                         refund_status: "COMPLETED",
                         amount: booking.total_price,
-                        transaction_reference: refundDetail.reference
+                        transaction_reference: refundDetail.tx_ref
                     }
                 });
             }
@@ -332,10 +340,11 @@ const guestBookings = async (guestId) => {
                 Clerk_id: guestId
             }
         })
+        if (!guest) return [];
         const bookings = await prisma.booking.findMany({
-            where: {
-                user_id: guest.user_id
-            }
+            where: { user_id: guest.user_id },
+            include: { property: { include: { propertyImages: true } }, payment: true },
+            orderBy: { created_at: 'desc' }
         })
         return bookings;
     } catch (error) {

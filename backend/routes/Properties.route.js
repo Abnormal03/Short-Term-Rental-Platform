@@ -15,7 +15,7 @@ router.put('/update/:propertyId', verifyRole(['HOST']), updateProperty)
 router.get('/featured', featuredProperties);
 
 //getting user's properties...
-router.get('/user/:id', verifyRole(['HOST']), getUserProperties);
+router.get('/mine', verifyRole(['HOST']), getUserProperties);
 
 //get unverified properties...Admin Only
 router.get('/notverified', verifyRole(['ADMIN']), getUnverifiedProperties);
@@ -36,7 +36,7 @@ router.put('/availability/:propertyId', verifyRole(['HOST']), updateAvailability
 router.get('/:id', getPropertyDetails);
 
 //add a new properties...
-router.post('/:userId', verifyRole(['HOST']), createProperty);
+router.post('/', verifyRole(['HOST']), createProperty);
 
 
 //delete users' property...

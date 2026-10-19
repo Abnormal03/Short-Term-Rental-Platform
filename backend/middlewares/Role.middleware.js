@@ -3,11 +3,10 @@ const prisma = require('../config/db');
 
 const verifyRole = (Role) => {
     return async (req, res, next) => {
-        const { userId } = await getAuth(req);
-
         try {
+            const { userId } = getAuth(req);
             if (!userId) {
-                return res.status(400).json({
+                return res.status(401).json({
                     success: false,
                     message: "Authentication required!"
                 })
@@ -28,7 +27,7 @@ const verifyRole = (Role) => {
             next();
         } catch (error) {
             console.log(error.message)
-            return res.status(403).json({ success: false, message: "unable to process user!" })
+            return res.status(500).json({ success: false, message: "Unable to authorize this request." })
         }
     }
 }

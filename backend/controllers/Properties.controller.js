@@ -19,7 +19,7 @@ const {
 const getProperties = async (req, res) => {
     try {
         const { page, limit } = req.query;
-        const { properties, count } = await getAllProperties(Number(page), Number(limit));
+        const { properties, count } = await getAllProperties(Number(page) || 1, Number(limit) || 20);
 
         return res.status(200).json({ success: true, properties, count });
     } catch (error) {
@@ -45,10 +45,10 @@ const getPropertyDetails = async (req, res) => {
 
 
 const getUserProperties = async (req, res) => {
-    const { id } = req.params;
+    const { userId } = getAuth(req);
     const { page, limit } = req.query;
     try {
-        const { properties, count } = await getUserProperty(id, Number(page), Number(limit));
+        const { properties, count } = await getUserProperty(userId, Number(page) || 1, Number(limit) || 20);
 
         return res.status(200).json({ success: true, properties, count });
     } catch (error) {
@@ -59,10 +59,14 @@ const getUserProperties = async (req, res) => {
 
 const createProperty = async (req, res) => {
     try {
-        const { userId } = req.params;
+        const { userId: clerkId } = getAuth(req);
         const { title, description, city, country, price_per_night, min_stay_duration, max_stay_duration, property_images, amenities } = req.body;
 
-        if (!title || !city || !country || !price_per_night || !min_stay_duration || !property_images) {
+        if (!title?.trim() || !description?.trim() || !city?.trim() || !country?.trim() ||
+            !Number.isFinite(Number(price_per_night)) || Number(price_per_night) <= 0 ||
+            !Number.isInteger(Number(min_stay_duration)) || !Number.isInteger(Number(max_stay_duration)) ||
+            Number(min_stay_duration) < 1 || Number(max_stay_duration) < Number(min_stay_duration) ||
+            (property_images !== undefined && !Array.isArray(property_images))) {
             return res.status(400).json({ success: false, message: "Full information not provided." });
         }
 
@@ -70,7 +74,7 @@ const createProperty = async (req, res) => {
             title, description, city, country, price_per_night, min_stay_duration, max_stay_duration, property_images, amenities
         }
 
-        const property = await addNewProperty(data, userId);
+        const property = await addNewProperty(data, clerkId);
 
         return res.status(201).json({ success: true, property });
     } catch (error) {
@@ -81,7 +85,7 @@ const createProperty = async (req, res) => {
 const getUnverifiedProperties = async (req, res) => {
     try {
         const { page, limit } = req.query;
-        const { properties, count } = await getunverifiedProperty(page, limit);
+        const { properties, count } = await getunverifiedProperty(Number(page) || 1, Number(limit) || 20);
 
         return res.status(200).json({ success: true, properties, count });
     } catch (error) {
@@ -110,7 +114,7 @@ const getDeletedProperties = async (req, res) => {
     try {
         const { page, limit } = req.query;
         // BUG FIX: was re-declaring `count` with properties.length, shadowing the real DB count
-        const { properties, count } = await deletedProperties(page, limit);
+        const { properties, count } = await deletedProperties(Number(page) || 1, Number(limit) || 20);
 
         if (properties && count > 0) {
             return res.status(200).json({ success: true, deletedProperties: properties, count });
@@ -166,7 +170,7 @@ const getPropertiesByCity = async (req, res) => {
         const { city } = req.params;
         const { page, limit } = req.query;
 
-        const { properties, count } = await propertyByCity(city, page, limit);
+        const { properties, count } = await propertyByCity(city, Number(page) || 1, Number(limit) || 20);
 
         if (!properties) {
             return res.status(400).json({ success: false, message: 'Failed to fetch properties.' });

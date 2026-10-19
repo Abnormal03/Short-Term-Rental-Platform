@@ -71,11 +71,13 @@ const getAllProperties = async (page, limit) => {
 const getUserProperty = async (id, page, limit) => {
     try {
         validatePagination(page, limit)
+        const host = await prisma.user.findUnique({ where: { Clerk_id: id }, select: { user_id: true } });
+        if (!host) throw new Error('Host account not found.');
         const skip = (page - 1) * limit;
         const properties = await prisma.property.findMany({
             where: {
                 AND: {
-                    host_id: id,
+                    host_id: host.user_id,
                     deleted_at: null
                 }
             },
@@ -86,7 +88,7 @@ const getUserProperty = async (id, page, limit) => {
         const count = await prisma.property.count({
             where: {
                 AND: {
-                    host_id: id,
+                    host_id: host.user_id,
                     deleted_at: null
                 }
             }
@@ -107,14 +109,14 @@ const getUserProperty = async (id, page, limit) => {
 }
 
 const addNewProperty = async (property, userId) => {
-
-    if (property.property_images.length >= 1) {
-        property.property_images = property.property_images.map(image => ({
+    const images = Array.isArray(property.property_images) ? property.property_images : [];
+    const imageData = images.map(image => ({
             image_url: image
-        }))
-    }
+        }));
 
     try {
+        const host = await prisma.user.findUnique({ where: { Clerk_id: userId }, select: { user_id: true } });
+        if (!host) throw new Error('Host account not found.');
         const NewProperty = await prisma.property.create({
             data: {
                 title: property.title,
@@ -124,12 +126,8 @@ const addNewProperty = async (property, userId) => {
                 price_per_night: property.price_per_night,
                 min_stay_duration: property.min_stay_duration,
                 max_stay_duration: property.max_stay_duration,
-                host_id: userId,
-                propertyImages: {
-                    createMany: {
-                        data: property.property_images
-                    }
-                },
+                host_id: host.user_id,
+                ...(imageData.length > 0 && { propertyImages: { createMany: { data: imageData } } }),
                 amenities: property.amenities
             },
         })
@@ -479,12 +477,19 @@ const propertyByCity = async (city, page, limit) => {
 
 const availabilityUpdate = async (propertyId, userId, availability) => {
     try {
+        const host = await prisma.user.findUnique({ where: { Clerk_id: userId }, select: { user_id: true } });
+        if (!host) throw new Error('Host account not found.');
+        const from = new Date(availability?.available_from);
+        const to = new Date(availability?.available_to);
+        if (!Number.isFinite(from.getTime()) || !Number.isFinite(to.getTime()) || from >= to) {
+            throw new Error('Availability dates are invalid.');
+        }
         const updatedProperty = await prisma.$transaction(async (tx) => {
             //check if the user is the owner of the property...
             const exists = await tx.property.findFirst({
                 where: {
                     property_id: propertyId,
-                    host_id: userId
+                    host_id: host.user_id
                 }
             })
 
@@ -493,17 +498,12 @@ const availabilityUpdate = async (propertyId, userId, availability) => {
             }
 
             const updatedProperty = await tx.property.update({
-                where: {
-                    property_id: propertyId,
-                    host_id: userId
-                },
+                where: { property_id: propertyId },
                 data: {
                     availabilities: {
-                        update: {
-                            data: {
-                                available_from: new Date(availability.available_from),
-                                available_to: new Date(availability.available_to)
-                            }
+                        upsert: {
+                            update: { available_from: from, available_to: to },
+                            create: { available_from: from, available_to: to }
                         }
                     }
                 }
@@ -523,15 +523,13 @@ const availabilityUpdate = async (propertyId, userId, availability) => {
 const getFeaturedProperties = async (limit) => {
     try {
         const featuredProperties = await prisma.property.findMany({
-            where: {
-                verification_status: 'APPROVED'      // only show verified properties
-            },
+            where: { verification_status: 'APPROVED', deleted_at: null },
             orderBy: {
                 bookings: {
                     _count: 'desc',
                 },
             },
-            take: Number(limit),
+            take: Math.min(Math.max(Number(limit) || 5, 1), 20),
             include: {
                 _count: {
                     select: { bookings: true },

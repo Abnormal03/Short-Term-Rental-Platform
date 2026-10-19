@@ -9,7 +9,7 @@ const router = express.Router();
 router.put('/user/update-user', verifyRole(['GUEST']), updateUserRole);
 
 //update language preference...
-router.put('/user/update-language', verifyRole(['USER', 'HOST', 'ADMIN']), updatePreference);
+router.put('/user/update-language', verifyRole(['GUEST', 'HOST', 'ADMIN']), updatePreference);
 
 //get all users...
 router.get('/all', verifyRole(['ADMIN']), getAllUsers);
@@ -21,7 +21,7 @@ router.put('/verify-host', verifyRole(['ADMIN']), verifyHost);
 // router.delete('/delete-user', verifyRole(['ADMIN']), deleteUser)
 
 //profile view...
-router.get('/profile', getUserProfile);
+router.get('/profile', verifyRole(['GUEST', 'HOST', 'ADMIN']), getUserProfile);
 
 //profile update...
 router.put('/profile/update', verifyRole(["ADMIN", "HOST", "GUEST"]), updateUserProfile);

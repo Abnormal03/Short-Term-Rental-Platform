@@ -32,7 +32,7 @@ const getAllDisputes = async (req, res) => {
     try {
         // BUG FIX: was `req.body` — pagination params must come from query string on GET requests
         const { page, limit } = req.query;
-        const disputes = await getAllDisputesService(page, limit);
+        const disputes = await getAllDisputesService(Number(page) || 1, Number(limit) || 20);
         return res.status(200).json({ success: true, disputes });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });

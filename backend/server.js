@@ -21,10 +21,8 @@ app.use(clerkMiddleware());
 // BUG FIX: cors() must be registered before express.json() so pre-flight OPTIONS
 // requests are handled before any body-parsing middleware runs.
 app.use(cors({
-    origin: [
-        'http://localhost:5173',
-        'https://patient-distinct-tuner-univ.trycloudflare.com',
-    ],
+    origin: (process.env.CORS_ORIGINS || 'http://localhost:5173,http://localhost:5174')
+        .split(',').map((origin) => origin.trim()).filter(Boolean),
     credentials: true,
 }));
 
@@ -37,7 +35,6 @@ app.use(express.json());
 // Properties route (public)
 app.use('/api/v1/properties', propertyRoutes);
 
-app.use(clerkMiddleware());
 // Protected routes
 app.use('/api/v1/auth', AuthRoute)
 app.use('/api/v1/bookings', bookingRoutes);
@@ -64,6 +61,6 @@ app.use((err, req, res, next) => {
     });
 });
 
-app.listen(process.env.PORT, () => {
-    console.log('Listening on port:', process.env.PORT);
+app.listen(process.env.PORT || 3000, () => {
+    console.log('Listening on port:', process.env.PORT || 3000);
 });

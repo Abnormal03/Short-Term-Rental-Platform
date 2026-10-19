@@ -8,7 +8,8 @@ const addBooking = async (req, res) => {
         const { userId } = getAuth(req);
         const { booking, paymentDetail } = req.body;
 
-        if (!booking || !booking.checkInDate || !booking.checkOutDate || !booking.totalPrice || !booking.paymentMethod || !paymentDetail) {
+        if (!booking || !booking.checkInDate || !booking.checkOutDate || !booking.paymentMethod ||
+            !paymentDetail?.email || !paymentDetail?.first_name || !paymentDetail?.phone_number) {
             return res.status(400).json({ success: false, message: 'Full information is required.' });
         }
 
@@ -57,7 +58,7 @@ const getPropertyBookings = async (req, res) => {
         const { propertyId } = req.params;
         const { page, limit } = req.query;
 
-        const { bookings, count } = await propertyBookings(propertyId, page, limit);
+        const { bookings, count } = await propertyBookings(propertyId, Number(page) || 1, Number(limit) || 20);
 
         if (bookings) {
             return res.status(200).json({ success: true, bookings, count });
@@ -74,7 +75,7 @@ const getConfirmedBookings = async (req, res) => {
         const { userId } = getAuth(req);
         const { page, limit } = req.query;
 
-        const { bookings, count } = await confirmedBookings(propertyId, userId, page, limit);
+        const { bookings, count } = await confirmedBookings(propertyId, userId, Number(page) || 1, Number(limit) || 20);
 
         if (bookings) {
             return res.status(200).json({ success: true, bookings, count });

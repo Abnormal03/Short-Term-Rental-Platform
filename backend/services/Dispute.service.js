@@ -13,7 +13,8 @@ const raiseDisputeService = async (bookingId, clerkId, reason) => {
                     user: true,
                     property: {
                         select: {
-                            host_id: true
+                            host_id: true,
+                            host: { select: { Clerk_id: true } }
                         }
                     }
                 }
@@ -28,9 +29,12 @@ const raiseDisputeService = async (bookingId, clerkId, reason) => {
             }
 
             //check if the useris the guest or host of the booking...
-            if (booking.user.Clerk_id !== clerkId && booking.property.host_id !== clerkId) {
+            if (booking.user.Clerk_id !== clerkId && booking.property.host.Clerk_id !== clerkId) {
                 throw new Error('Only guest or host of the booking can raise a dispute');
             }
+            const raisingUser = booking.user.Clerk_id === clerkId
+                ? booking.user
+                : await tx.user.findUnique({ where: { Clerk_id: clerkId }, select: { user_id: true } });
 
             //check for an open existing dispute for the booking...
             const exists = await tx.dispute.findFirst({
@@ -45,7 +49,7 @@ const raiseDisputeService = async (bookingId, clerkId, reason) => {
             }
 
             const dispute = await tx.dispute.create({
-                data: { booking_id: bookingId, raised_by: booking.user_id, reason: reason }
+                data: { booking_id: bookingId, raised_by: raisingUser.user_id, reason }
             });
 
             await tx.booking.update({

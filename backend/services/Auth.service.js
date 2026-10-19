@@ -2,20 +2,23 @@ const prisma = require('../config/db');
 
 const createUser = async (user) => {
     try {
+        const email = user.email_addresses?.[0]?.email_address;
+        if (!user.id || !email) throw new Error('Clerk user is missing an ID or email address.');
+        const name = [user.first_name, user.last_name].filter(Boolean).join(' ') || 'Unknown';
 
         await prisma.user.upsert({
             where: {
                 Clerk_id: user.id
             },
             update: {
-                name: user.first_name ? `${user.first_name} ${user.last_name || ''}` : "Unknown",
+                name,
                 phone_number: user.phone_numbers?.[0]?.phone_number,
             },
             create: {
                 Clerk_id: user.id,
-                name: user.first_name ? `${user.first_name} ${user.last_name || ''}` : "Unknown",
-                email: user.email_addresses[0]?.email_address,
-                phone_number: user.phone_numbers[0]?.phone_number || null,
+                name,
+                email,
+                phone_number: user.phone_numbers?.[0]?.phone_number || null,
                 Role: "GUEST"
             },
         })

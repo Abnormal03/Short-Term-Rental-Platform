@@ -2,38 +2,13 @@ const prisma = require('../config/db')
 
 const updateRole = async (userId, role, phoneNumber) => {
     try {
-        const user = await prisma.$transaction(async (prisma) => {
-            //check if phone number is already associated with another user
-            const existingUser = await prisma.user.findFirst({
-                where: {
-                    phone_number: phoneNumber,
-                    Clerk_id: {
-                        not: userId
-                    }
-                }
-            });
-
-            if (existingUser) {
-                throw new Error('Phone number is already associated with another user.');
-            }
-
-            const user = await prisma.user.update({
-                where: {
-                    Clerk_id: userId
-                },
-                data: {
-                    Role: role,
-                    phone_number: phoneNumber
-                }
-            })
-
-            return user;
-        })
-
-        return user;
+        return await prisma.user.update({
+            where: { Clerk_id: userId },
+            data: { Role: role, phone_number: phoneNumber }
+        });
     } catch (error) {
         console.error('Error updating user role:', error.message);
-        throw new Error(error.message || 'Failed to update user role');
+        throw error;
     }
 }
 
@@ -70,14 +45,14 @@ const getAllUsersFromDB = async (userId, page, limit) => {
     }
 }
 
-const verifyHost = async (userId, verified) => {
+const verifyHost = async (hostId, verified) => {
     try {
         const user = await prisma.user.update({
             where: {
-                Clerk_id: userId
+                user_id: hostId
             },
             data: {
-                isVerifiedHost: verified
+                is_verified_host: verified
             }
         });
         return user;
@@ -126,24 +101,18 @@ const verifyHost = async (userId, verified) => {
 
 const userProfile = async (userId) => {
     try {
-        //getting user profile and recent bookings or properties if user is host
         const user = await prisma.user.findUnique({
-            where: {
-                Clerk_id: userId
-            }, include: {
-                languagePreference: true,
-                properties: {
-                    take: 5,
-                    orderBy: {
-                        created_at: 'desc'
-                    }
-                },
-                bookings: {
-                    take: 5,
-                    orderBy: {
-                        created_at: 'desc'
-                    }
-                }
+            where: { Clerk_id: userId },
+            select: {
+                user_id: true,
+                name: true,
+                email: true,
+                Role: true,
+                phone_number: true,
+                is_verified_host: true,
+                payment_preference: true,
+                create_at: true,
+                languagePreference: { select: { language_code: true } }
             }
         });
         return user;
@@ -161,8 +130,13 @@ const updateUser = async (userId, updateData) => {
         const sanitizedData = {};
         for (const field of allowedFields) {
             if (updateData[field] !== undefined) {
-                sanitizedData[field] = updateData[field];
+                sanitizedData[field] = field === 'name' || field === 'phone_number'
+                    ? updateData[field]?.trim?.() ?? updateData[field]
+                    : updateData[field];
             }
+        }
+        if (Object.keys(sanitizedData).length === 0) {
+            throw new Error('Provide a name or phone number to update.');
         }
 
         const updatedUser = await prisma.user.update({
@@ -181,12 +155,26 @@ const updateUser = async (userId, updateData) => {
 const hostProfile = async (hostId) => {
     try {
         //hostId is user_id of the host whose profile is being fetched
-        const host = await prisma.user.findUnique({
+        const host = await prisma.user.findFirst({
             where: {
-                user_id: hostId
+                user_id: hostId,
+                Role: 'HOST'
             },
-            include: {
-                properties: true
+            select: {
+                user_id: true,
+                name: true,
+                is_verified_host: true,
+                properties: {
+                    where: { verification_status: 'APPROVED', deleted_at: null },
+                    select: {
+                        property_id: true,
+                        title: true,
+                        city: true,
+                        country: true,
+                        price_per_night: true,
+                        propertyImages: { select: { image_url: true } }
+                    }
+                }
             }
         })
         return host;
