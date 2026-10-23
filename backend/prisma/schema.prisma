@@ -84,6 +84,7 @@ model Booking {
   property       Property      @relation(fields: [property_id], references: [property_id])
   check_in_date  DateTime
   check_out_date DateTime
+  guest_count    Int           @default(1)
   total_price    Float
   booking_status BookingStatus @default(PENDING)
   created_at     DateTime      @default(now())

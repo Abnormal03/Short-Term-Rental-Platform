@@ -1,4 +1,4 @@
-const { createBooking, cancelBook, propertyBookings, paymentSuccessfulFail, attachTransactionRef, confirmedBookings, guestBookings, bookingDetail } = require("../services/Booking.service");
+const { createBooking, cancelBook, propertyBookings, paymentSuccessfulFail, attachTransactionRef, confirmedBookings, guestBookings, bookingDetail, confirmGuestBookingPayment, retryGuestBookingPayment } = require("../services/Booking.service");
 const { getAuth } = require('@clerk/express');
 const { initializePayment } = require("../services/Chapa.service");
 
@@ -19,7 +19,9 @@ const addBooking = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Unable to book property.' });
         }
 
-        const initialize = await initializePayment(paymentDetail);
+        const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
+        const returnUrl = `${frontendUrl}/bookings/${newBooking.booking_id}/confirmation`;
+        const initialize = await initializePayment(paymentDetail, returnUrl);
 
         if (!initialize.success) {
             await paymentSuccessfulFail(newBooking.booking_id, false);
@@ -138,4 +140,26 @@ const guestDetailBooking = async (req, res) => {
     }
 }
 
-module.exports = { addBooking, cancelBooking, getPropertyBookings, paymentSuccessFail, getConfirmedBookings, myBookings, guestDetailBooking }
+const retryGuestPayment = async (req, res) => {
+    try {
+        const { userId } = getAuth(req);
+        const result = await retryGuestBookingPayment(req.params.bookingId, userId, req.body?.paymentDetails || {});
+        if (!result) return res.status(404).json({ success: false, message: 'Booking not found.' });
+        return res.status(200).json({ success: true, ...result });
+    } catch (error) {
+        return res.status(400).json({ success: false, message: error.message || 'Unable to retry payment.' });
+    }
+}
+const confirmGuestBooking = async (req, res) => {
+    try {
+        const { userId } = getAuth(req);
+        const { bookingId } = req.params;
+        const result = await confirmGuestBookingPayment(bookingId, userId, req.query.return_status);
+        if (!result) return res.status(404).json({ success: false, message: 'Booking not found.' });
+        return res.status(200).json({ success: true, ...result });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message || 'Unable to confirm booking payment.' });
+    }
+}
+
+module.exports = { addBooking, cancelBooking, getPropertyBookings, paymentSuccessFail, getConfirmedBookings, myBookings, guestDetailBooking, confirmGuestBooking, retryGuestPayment }

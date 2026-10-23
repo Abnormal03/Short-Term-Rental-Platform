@@ -1,6 +1,6 @@
 const prisma = require("../config/db");
 
-const { refund: chapaRefund } = require('./Chapa.service')
+const { refund: chapaRefund, verifyPayment, failSuccessPayment, initializePayment } = require('./Chapa.service')
 const SERVICE_FEE = 500;
 const CLEANING_FEE = 800;
 
@@ -69,6 +69,7 @@ const createBooking = async (booking, clerkId, propertyId) => {
                 data: {
                     property_id: propertyId,
                     user_id: user.user_id,
+                    guest_count: Math.max(1, Number(booking.guests) || 1),
                     check_in_date: checkIn,
                     check_out_date: checkOut,
                     total_price: totalPrice,
@@ -335,6 +336,43 @@ const attachTransactionRef = async (bookingId, paymentId, tx_ref) => {
     }
 }
 
+const retryGuestBookingPayment = async (bookingId, guestId, paymentDetails = {}) => {
+    const booking = await bookingDetail(bookingId, guestId);
+    if (!booking) return null;
+    if (booking.booking_status !== 'PENDING' || booking.payment?.payment_status !== 'PENDING') {
+        throw new Error('Only unpaid pending bookings can retry payment.');
+    }
+
+    const storedName = String(booking.user?.name || '').trim().split(/\s+/);
+    const details = {
+        price: booking.payment.amount,
+        email: paymentDetails.email || booking.user?.email,
+        first_name: paymentDetails.first_name || storedName[0],
+        last_name: paymentDetails.last_name || storedName.slice(1).join(' '),
+        phone_number: paymentDetails.phone_number || booking.user?.phone_number,
+    };
+    if (!details.email || !details.first_name || !details.phone_number) {
+        throw new Error('Add your name, email, and phone number before retrying payment.');
+    }
+
+    if (booking.payment.transaction_reference) {
+        try {
+            const verification = await verifyPayment(booking.payment.transaction_reference);
+            if (String(verification?.data?.status || '').toLowerCase() === 'success') {
+                await failSuccessPayment(booking.payment.transaction_reference, booking.payment.payment_method, true);
+                return { state: 'success', booking: await bookingDetail(bookingId, guestId) };
+            }
+        } catch (error) {
+            console.warn('Could not verify the existing payment before retry:', error.message);
+        }
+    }
+    const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
+    const initialized = await initializePayment(details, `${frontendUrl}/bookings/${bookingId}/confirmation`);
+    if (!initialized.success) throw new Error(initialized.message || 'Unable to restart payment.');
+
+    const updatedBooking = await attachTransactionRef(bookingId, booking.payment.payment_id, initialized.tx_ref);
+    return { booking: updatedBooking, checkout_url: initialized.checkout_url?.checkout_url || initialized.checkout_url };
+};
 const guestBookings = async (guestId) => {
     try {
         const guest = await prisma.user.findUnique({
@@ -381,10 +419,12 @@ const bookingDetail = async (bookingId, guestId) => {
                 user_id: guest.user_id
             }, include: {
                 payment: true,
+                user: { select: { name: true, email: true, phone_number: true } },
                 property: {
                     include: {
                         propertyImages: true,
-                        host: true
+                        availabilities: true,
+                        host: { select: { name: true, email: true, phone_number: true, is_verified_host: true } }
                     }
                 }
 
@@ -397,5 +437,46 @@ const bookingDetail = async (bookingId, guestId) => {
     }
 }
 
+const confirmGuestBookingPayment = async (bookingId, guestId, returnStatus) => {
+    const booking = await bookingDetail(bookingId, guestId);
+    if (!booking) return null;
 
-module.exports = { createBooking, cancelBook, propertyBookings, paymentSuccessfulFail, attachTransactionRef, confirmedBookings, guestBookings, bookingDetail };
+    const payment = booking.payment;
+    let state = getBookingPaymentState(booking.booking_status, payment?.payment_status);
+    const paymentWasCancelled = ['cancelled', 'canceled'].includes(String(returnStatus || '').toLowerCase());
+    let providerStatus = null;
+
+    if (state === 'failed' && paymentWasCancelled) state = 'cancelled';
+
+    if (state === 'pending' && payment?.transaction_reference) {
+        try {
+            const verification = await verifyPayment(payment.transaction_reference);
+            providerStatus = String(verification?.data?.status || verification?.status || '').toLowerCase();
+
+            if (providerStatus === 'success') {
+                await failSuccessPayment(payment.transaction_reference, payment.payment_method, true);
+                state = 'success';
+            } else if (['failed', 'cancelled', 'canceled', 'expired'].includes(providerStatus)) {
+                await failSuccessPayment(payment.transaction_reference, payment.payment_method, false);
+                state = providerStatus === 'cancelled' || providerStatus === 'canceled' || paymentWasCancelled ? 'cancelled' : 'failed';
+            }
+        } catch (error) {
+            console.warn('Chapa confirmation check pending:', error.message);
+        }
+    }
+
+    const currentBooking = await bookingDetail(bookingId, guestId);
+    state = getBookingPaymentState(currentBooking.booking_status, currentBooking.payment?.payment_status, state);
+    return { state, booking: currentBooking, providerStatus };
+}
+
+function getBookingPaymentState(bookingStatus, paymentStatus, previousState) {
+    if (['REFUNDED', 'REFUNDING'].includes(bookingStatus) || paymentStatus === 'REFUNDED') return 'cancelled';
+    if (paymentStatus === 'FAILED') return previousState === 'cancelled' ? 'cancelled' : 'failed';
+    if (bookingStatus === 'CANCELLED') return 'cancelled';
+    if (paymentStatus === 'COMPLETED' && ['CONFIRMED', 'COMPLETED', 'DISPUTED'].includes(bookingStatus)) return 'success';
+    return 'pending';
+}
+
+
+module.exports = { createBooking, cancelBook, propertyBookings, paymentSuccessfulFail, attachTransactionRef, confirmedBookings, guestBookings, bookingDetail, confirmGuestBookingPayment, retryGuestBookingPayment };

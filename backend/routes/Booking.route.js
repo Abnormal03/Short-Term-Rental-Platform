@@ -1,7 +1,7 @@
 const express = require('express');
 const { verifyRole } = require('../middlewares/Role.middleware');
 
-const { addBooking, cancelBooking, getPropertyBookings, paymentSuccessFail, getConfirmedBookings, myBookings, guestDetailBooking } = require('../controllers/Booking.controller');
+const { addBooking, cancelBooking, getPropertyBookings, paymentSuccessFail, getConfirmedBookings, myBookings, guestDetailBooking, confirmGuestBooking, retryGuestPayment } = require('../controllers/Booking.controller');
 
 const router = express.Router();
 
@@ -22,6 +22,12 @@ router.get('/confirmed/:propertyId', verifyRole(['HOST']), getConfirmedBookings)
 
 //view all my bookings guest...
 router.get('/my-bookings', verifyRole(['GUEST']), myBookings);
+
+// Retry payment for an existing unpaid booking.
+router.post('/my-bookings/:bookingId/payment/retry', verifyRole(['GUEST']), retryGuestPayment);
+
+// Verify payment state with Chapa and return the current guest-owned booking.
+router.get('/my-bookings/:bookingId/confirmation', verifyRole(['GUEST']), confirmGuestBooking);
 
 //booking detail view for guest
 router.get('/my-bookings/:bookingId', verifyRole(['GUEST']), guestDetailBooking);

@@ -15,7 +15,7 @@ const handleChapaCallback = async (req, res) => {
     return res.redirect(`${process.env.FRONTEND_URL}/payment/failed?trx_ref=${trx_ref}`)
 }
 
-const initializePayment = async (paymentDetail) => {
+const initializePayment = async (paymentDetail, returnUrl) => {
     try {
         const transactionRef = `rental-${Date.now()}`;
         const response = await fetch('https://api.chapa.co/v1/transaction/initialize', {
@@ -33,7 +33,7 @@ const initializePayment = async (paymentDetail) => {
                 "phone_number": paymentDetail.phone_number,
                 "tx_ref": transactionRef,
                 "callback_url": process.env.CHAPA_CALLBACK_URL,
-                "return_url": process.env.CHAPA_RETURN_URL,
+                "return_url": returnUrl || process.env.CHAPA_RETURN_URL,
                 "customization[title]": "Property Booking Payment",
                 "customization[description]": `Booking for Property.`,
             })
