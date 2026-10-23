@@ -7,12 +7,14 @@ import { NavLink } from "react-router-dom";
 import { Spinner } from "../../../components/UI/Spinner";
 import useInitializeBooking from "../../booking/hooks/useInitializeBooking";
 import useUserStore from "../../../store/useUser";
+import RetryButton from '../../../components/UI/RetryButton'
 
 const PaymentMethods = ({ paymentMethods, setPaymentMethods, checkIn, checkOut, total, propertyId }) => {
     const { isSignedIn, user } = useUser();
     const { phoneNumber } = useUserStore();
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('telebirr');
     const [loginError, setLoginError] = useState(false);
+    const [accountIssue, setAccountIssue] = useState('');
     const [tried, setTried] = useState(false);
 
     // Call the mutation hook at the top level
@@ -20,12 +22,20 @@ const PaymentMethods = ({ paymentMethods, setPaymentMethods, checkIn, checkOut, 
 
     const confirmBooking = () => {
         if (!isSignedIn) {
+            setAccountIssue('signed-out');
             setLoginError(true);
             setPaymentMethods(false);
             return;
         }
         setTried(true);
-        if (!phoneNumber || !user?.primaryEmailAddress?.emailAddress) {
+        if (!phoneNumber) {
+            setAccountIssue('profile-incomplete');
+            setLoginError(true);
+            setPaymentMethods(false);
+            return;
+        }
+        if (!user?.primaryEmailAddress?.emailAddress) {
+            setAccountIssue('missing-email');
             setLoginError(true);
             setPaymentMethods(false);
             return;
@@ -66,9 +76,21 @@ const PaymentMethods = ({ paymentMethods, setPaymentMethods, checkIn, checkOut, 
         <>
             {loginError && (
                 <Modal isOpen={loginError} onClose={() => setLoginError(false)}>
-                    <div className="text-center flex flex-col gap-5">
-                        <p>You Must Login and Fill Out Your Information Before Booking!</p>
-                        <NavLink to={'/sign-in'}><Button size="md">Login</Button></NavLink>
+                    <div className="flex flex-col gap-5 text-center">
+                        <p role="alert" className="text-text">
+                            {accountIssue === 'signed-out'
+                                ? 'Sign in before continuing to payment.'
+                                : accountIssue === 'profile-incomplete'
+                                    ? 'Add a phone number to your profile before booking.'
+                                    : 'A primary email address is required before booking.'}
+                        </p>
+                        {accountIssue === 'signed-out' ? (
+                            <NavLink to="/sign-in"><Button size="md">Sign in</Button></NavLink>
+                        ) : accountIssue === 'profile-incomplete' ? (
+                            <NavLink to="/complete-profile"><Button size="md">Complete profile</Button></NavLink>
+                        ) : (
+                            <Button size="md" onClick={() => setLoginError(false)}>Close</Button>
+                        )}
                     </div>
                 </Modal>
             )}
@@ -77,61 +99,61 @@ const PaymentMethods = ({ paymentMethods, setPaymentMethods, checkIn, checkOut, 
                 <div className='w-full max-w-md mx-auto'>
                     <div className='flex gap-3 items-center mb-6'>
                         <Wallet className='text-primary size-7' />
-                        <h2 className='font-bold text-2xl text-gray-900'>Payment Method</h2>
+                        <h2 className='font-bold text-2xl text-text'>Payment Method</h2>
                     </div>
 
                     <div className='flex flex-col gap-4'>
                         {/* Telebirr */}
                         <div
-                            className={`w-full border p-4 rounded-xl flex items-center justify-between cursor-pointer transition-colors ${selectedPaymentMethod === 'telebirr' ? 'border-primary bg-[#f4f7fc]' : 'border-gray-200 hover:border-primary/50'}`}
+                            className={`w-full border p-4 rounded-xl flex items-center justify-between cursor-pointer transition-colors ${selectedPaymentMethod === 'telebirr' ? 'border-primary bg-bg-2' : 'border-border hover:border-primary/50'}`}
                             onClick={() => setSelectedPaymentMethod('telebirr')}
                         >
                             <div className='flex items-center gap-4'>
-                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedPaymentMethod === 'telebirr' ? 'border-primary' : 'border-gray-300'}`}>
+                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedPaymentMethod === 'telebirr' ? 'border-primary' : 'border-border'}`}>
                                     {selectedPaymentMethod === 'telebirr' && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
                                 </div>
-                                <span className='font-medium text-lg text-gray-900'>Telebirr</span>
+                                <span className='font-medium text-lg text-text'>Telebirr</span>
                             </div>
-                            <div className='bg-[#e8ecef] p-2 rounded-lg text-primary'>
+                            <div className='bg-neutral p-2 rounded-lg text-primary'>
                                 <Smartphone className='size-5' />
                             </div>
                         </div>
 
                         {/* CBE Birr */}
                         <div
-                            className={`w-full border p-4 rounded-xl flex items-center justify-between cursor-pointer transition-colors ${selectedPaymentMethod === 'cbe' ? 'border-primary bg-[#f4f7fc]' : 'border-gray-200 hover:border-primary/50'}`}
+                            className={`w-full border p-4 rounded-xl flex items-center justify-between cursor-pointer transition-colors ${selectedPaymentMethod === 'cbe' ? 'border-primary bg-bg-2' : 'border-border hover:border-primary/50'}`}
                             onClick={() => setSelectedPaymentMethod('cbe')}
                         >
                             <div className='flex items-center gap-4'>
-                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedPaymentMethod === 'cbe' ? 'border-primary' : 'border-gray-300'}`}>
+                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedPaymentMethod === 'cbe' ? 'border-primary' : 'border-border'}`}>
                                     {selectedPaymentMethod === 'cbe' && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
                                 </div>
-                                <span className='font-medium text-lg text-gray-900'>CBE Birr</span>
+                                <span className='font-medium text-lg text-text'>CBE Birr</span>
                             </div>
-                            <div className='bg-[#e8ecef] p-2 rounded-lg text-primary'>
+                            <div className='bg-neutral p-2 rounded-lg text-primary'>
                                 <Landmark className='size-5' />
                             </div>
                         </div>
 
                         {/* Bank Transfer */}
                         <div
-                            className={`w-full border p-4 rounded-xl flex items-center justify-between cursor-pointer transition-colors ${selectedPaymentMethod === 'bank_transfer' ? 'border-primary bg-[#f4f7fc]' : 'border-gray-200 hover:border-primary/50'}`}
+                            className={`w-full border p-4 rounded-xl flex items-center justify-between cursor-pointer transition-colors ${selectedPaymentMethod === 'bank_transfer' ? 'border-primary bg-bg-2' : 'border-border hover:border-primary/50'}`}
                             onClick={() => setSelectedPaymentMethod('bank_transfer')}
                         >
                             <div className='flex items-center gap-4'>
-                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedPaymentMethod === 'bank_transfer' ? 'border-primary' : 'border-gray-300'}`}>
+                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedPaymentMethod === 'bank_transfer' ? 'border-primary' : 'border-border'}`}>
                                     {selectedPaymentMethod === 'bank_transfer' && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
                                 </div>
-                                <span className='font-medium text-lg text-gray-900'>Bank Transfer</span>
+                                <span className='font-medium text-lg text-text'>Bank Transfer</span>
                             </div>
-                            <div className='bg-[#e8ecef] p-2 rounded-lg text-primary'>
+                            <div className='bg-neutral p-2 rounded-lg text-primary'>
                                 <Banknote className='size-5' />
                             </div>
                         </div>
                     </div>
 
                     {(chapaError && tried) && (
-                        <p className="text-red-500 text-sm mt-2 text-center">{chapaError?.response?.data?.message || chapaError?.message}</p>
+                        <div className="mt-2 grid justify-items-center gap-2"><p role="alert" className="text-danger text-sm text-center">{chapaError?.response?.data?.message || chapaError?.message}</p><RetryButton onRetry={confirmBooking} isRetrying={isInitializing} label="Retry booking"/></div>
                     )}
 
                     <div className='mt-8'>

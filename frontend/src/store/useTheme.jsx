@@ -1,14 +1,27 @@
-import { create } from 'zustand';
+import { create } from 'zustand'
+import { applyTheme, getSavedTheme, THEME_STORAGE_KEY } from '../constants/colors'
+
+const initialTheme = getSavedTheme()
+applyTheme(initialTheme)
 
 const useThemeStore = create((set) => ({
-    theme: localStorage.getItem('theme') || 'light',
-    toggleTheme: () =>
-        set((state) => {
-            const next = state.theme === 'light' ? 'dark' : 'light';
-            localStorage.setItem('theme', next);
-            document.documentElement.classList.toggle('dark', next === 'dark');
-            return { theme: next };
-        }),
-}));
+    theme: initialTheme,
+    setTheme: (theme) => {
+        const next = theme === 'dark' ? 'dark' : 'light'
+        localStorage.setItem(THEME_STORAGE_KEY, next)
+        applyTheme(next)
+        set({ theme: next })
+    },
+    toggleTheme: () => set((state) => {
+        const next = state.theme === 'light' ? 'dark' : 'light'
+        localStorage.setItem(THEME_STORAGE_KEY, next)
+        applyTheme(next)
+        return { theme: next }
+    }),
+}))
 
-export default useThemeStore;
+export function useTheme() {
+    return useThemeStore()
+}
+
+export default useThemeStore

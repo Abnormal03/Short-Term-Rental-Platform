@@ -2,8 +2,8 @@ export function Button({ children, variant = 'primary', size = 'md', className, 
     const base = 'rounded-lg transition-all';
     const variants = {
         primary: 'bg-primary text-button-text',
-        outline: 'border border-gray-200 text-gray-700 hover:bg-gray-50',
-        ghost: 'text-gray-500 hover:bg-gray-100 border',
+        outline: 'border border-border text-text hover:bg-neutral',
+        ghost: 'text-text-2 hover:bg-neutral border',
         secondary: 'bg-secondary text-text'
     };
     const sizes = {

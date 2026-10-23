@@ -1,11 +1,11 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.jsx'
+import { applyTheme, getSavedTheme } from './constants/colors'
 
 import { ClerkProvider } from "@clerk/clerk-react"
 
-const saved = localStorage.getItem('theme') || 'light';
-document.documentElement.classList.toggle('dark', saved === 'dark');
+applyTheme(getSavedTheme());
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

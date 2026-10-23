@@ -1,34 +1,42 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import { useUser } from '@clerk/clerk-react'
 import { ArrowRight, LockKeyhole, Phone, Search, School } from 'lucide-react'
 import Button from '../../../components/UI/Botton'
 import useProfileUpdate from '../hooks/useProfileUpdate';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import useUserStore from '../../../store/useUser';
+import RetryButton from '../../../components/UI/RetryButton'
 
 export function CompleteProfileForm() {
-    const [role, setRole] = useState('GUEST');
+    const savedRole = useUserStore((state) => state.role);
+    const [role, setRole] = useState(savedRole || 'GUEST');
     const [phoneNumber, setPhoneNumber] = useState("");
     const [numberError, setNumberError] = useState("");
     const navigate = useNavigate()
+    const location = useLocation()
+    const { user } = useUser();
 
     const [redirecting, setRedirecting] = useState(false);
 
     const { mutate: updateProfile, isPending: updating, error: updateError } = useProfileUpdate();
-    const handleSubmit = () => {
-        if (!phoneNumber) {
-            setNumberError("Legit and Working Phone Number is needed for contact!");
+    const submitProfile = () => updateProfile(
+        { phoneNumber: phoneNumber.trim(), role },
+        {
+            onSuccess: (result) => {
+                useUserStore.getState().setUser(user, result?.user?.Role || role, phoneNumber.trim(), true);
+                setRedirecting(true);
+                navigate(location.state?.from || '/', { replace: true });
+            }
+        }
+    )
+    const handleSubmit = (event) => {
+        event.preventDefault();
+        const normalizedPhone = phoneNumber.trim();
+        if (!/^\+?[0-9()\s-]{7,20}$/.test(normalizedPhone)) {
+            setNumberError("Enter a valid phone number so guests and hosts can contact you.");
             return;
         }
-        updateProfile(
-            {
-                phoneNumber,
-                role
-            }
-            , {
-                onSuccess: () => {
-                    setRedirecting(true);
-                    navigate('/');
-                }
-            })
+        submitProfile()
 
     }
 
@@ -39,7 +47,7 @@ export function CompleteProfileForm() {
                 <p className="mt-3.5 mb-9 text-pretty text-[1.06rem] leading-relaxed text-app-text/50">Just a few more details to get you started on Zemen.</p>
             </div>
 
-            <form className="grid gap-8.5" onSubmit={(event) => event.preventDefault()}>
+            <form className="grid gap-8.5" onSubmit={handleSubmit}>
                 <div>
                     <div className="mb-2.5 flex items-center justify-between text-[0.95rem] font-bold text-app-text/80">
                         <label htmlFor="phone">Phone Number</label>
@@ -60,8 +68,8 @@ export function CompleteProfileForm() {
                 </fieldset>
 
                 {numberError && <p className='text-sm sm:-mb-10 text-center text-red-400'>{numberError}</p>}
-                {updateError && <p className='text-sm sm:-mb-10 text-center text-red-400'>{updateError.response?.data?.message || updateError.cause}</p>}
-                <Button className={"flex gap-5 justify-center shadow-2xl"} size='wide' onClick={handleSubmit}>Finish Setup <ArrowRight size={24} strokeWidth={2.2} aria-hidden="true" /></Button>
+                {updateError && <div className='grid justify-items-center gap-2 sm:-mb-10'><p role="alert" className='text-sm text-center text-danger'>{updateError.response?.data?.message || updateError.message || 'Could not save your profile.'}</p><RetryButton onRetry={submitProfile} isRetrying={updating} label="Retry profile setup"/></div>}
+                <Button type="submit" disabled={updating || redirecting} className={"flex gap-5 justify-center shadow-2xl"} size='wide'>{updating ? "Saving…" : redirecting ? "Finishing up…" : <>Finish Setup <ArrowRight size={24} strokeWidth={2.2} aria-hidden="true" /></>}</Button>
                 <p className="mt-0 flex items-center justify-center gap-2.5 text-center text-[0.9rem] text-app-text/50"><LockKeyhole size={16} strokeWidth={1.8} aria-hidden="true" /> Your information is secure and encrypted.</p>
             </form>
         </section>
@@ -73,7 +81,7 @@ function RoleCard({ selected, onSelect, icon, title, description, iconClass }) {
         <button className={`flex min-h-50 flex-col items-start gap-1.5 rounded-2xl border-2 p-6.5 text-left transition-colors ${selected ? 'border-primary bg-bg-2' : 'border-app-text/10 bg-bg'}`} type="button" onClick={onSelect} aria-pressed={selected}>
             <span className="mb-2.5 flex w-full items-center justify-between">
                 <span className={`grid size-11 place-items-center rounded-full ${iconClass}`} aria-hidden="true">{icon}</span>
-                <span className={`grid size-6.5 place-items-center rounded-full border-2 ${selected ? 'border-primary bg-primaborder-primary shadow-[inset_0_0_0_4px_var(--profile-card)]' : 'border-app-text/50'}`} aria-hidden="true" />
+                <span className={`grid size-6.5 place-items-center rounded-full border-2 ${selected ? 'border-primary bg-primary shadow-[inset_0_0_0_4px_var(--surface)]' : 'border-app-text/50'}`} aria-hidden="true" />
             </span>
             <span className="text-[1.7rem] font-bold tracking-[-0.03em] text-app-text">{title}</span>
             <span className="max-w-52 text-[1.05rem] leading-[1.35] text-app-text/50">{description}</span>

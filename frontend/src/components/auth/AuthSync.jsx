@@ -1,23 +1,30 @@
 import { useEffect } from 'react';
-import { useUser } from '@clerk/clerk-react';
+import { useAuth, useUser } from '@clerk/clerk-react';
 import useUserStore from '../../store/useUser';
 import api from '../../lib/axios';
 
 const AuthSync = () => {
     const { isLoaded, isSignedIn, user: clerkUser } = useUser();
-    const { setUser, clearUser } = useUserStore();
+    const { getToken } = useAuth();
+    const { setUser, clearUser, setProfileLoading } = useUserStore();
 
     useEffect(() => {
+        let isCurrent = true;
         const syncUserWithBackend = async () => {
             if (isLoaded && isSignedIn && clerkUser) {
+                setProfileLoading();
                 try {
-                    const response = await api.get(`/auth/me`);
-                    
+                    const token = await getToken();
+                    const response = await api.get('/auth/me', {
+                        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+                    });
                     const dbUser = response.data;
-                    setUser(clerkUser, dbUser?.role || 'GUEST', dbUser?.phoneNumber || null);
+                    if (isCurrent) {
+                        setUser(clerkUser, dbUser?.role || 'GUEST', dbUser?.phoneNumber || null, dbUser?.profileComplete);
+                    }
                 } catch (error) {
                     console.error("Failed to sync user with backend:", error.message);
-                    setUser(clerkUser, 'GUEST');
+                    if (isCurrent) setUser(clerkUser, 'GUEST', null, null);
                 }
             } else if (isLoaded && !isSignedIn) {
                 clearUser();
@@ -25,7 +32,8 @@ const AuthSync = () => {
         };
 
         syncUserWithBackend();
-    }, [isLoaded, isSignedIn, clerkUser, setUser, clearUser]);
+        return () => { isCurrent = false; };
+    }, [isLoaded, isSignedIn, clerkUser, getToken, setUser, clearUser, setProfileLoading]);
 
     return null;
 };

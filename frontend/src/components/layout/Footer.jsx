@@ -14,7 +14,7 @@ const GuestFooter = () => {
 
                 {/* Brand column */}
                 <div className='flex flex-col gap-4'>
-                    <NavLink to='/' className='font-bold text-2xl text-white'>Zemen</NavLink>
+                    <NavLink to='/' className='font-bold text-2xl text-white'>Betoch</NavLink>
                     <p className='text-white/70 text-sm leading-relaxed max-w-56'>
                         Modern Hospitality in the Heart of Ethiopia. Redefining your stay
                         with security and local excellence.
@@ -72,7 +72,7 @@ const GuestFooter = () => {
             {/* Copyright bar */}
             <div className='border-t border-white/10 py-4 px-6 sm:px-10 text-center'>
                 <p className='text-white/50 text-xs'>
-                    © 2024 Zemen Rentals. Modern Hospitality in the Heart of Ethiopia. All rights reserved.
+                    © {new Date().getFullYear()} Betoch Rentals Ethiopia. All rights reserved.
                 </p>
             </div>
         </footer>
@@ -81,19 +81,18 @@ const GuestFooter = () => {
 
 const HostFooter = () => {
     return (
-        <div className='fixed bottom-0 md:right-0 sm:flex justify-between px-3 items-center  md:py-4 w-full z-5 sm:z-0'>
-            <hr className='w-screen sm:hidden text-green-500' />
+        <footer className='mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-border bg-bg px-4 py-4'>
             <div className='sm:hidden'>
                 <h1 className='text-primary text-2xl font-bold text-shadow-lg'>Betoch</h1>
                 <p className='flex gap-1 text-sm text-primary'><Copyright /> 2026 BETOCH RENTALS ETHIOPIA.</p>
             </div>
             <div></div>
-            <div className='flex flex-col gap-1 lg:flex-row sm:flex-row sm:gap-5 lg:gap-3 lg:pr-20'>
+            <div className='flex flex-wrap gap-4'>
                 <NavLink to={'/privacy'} className={"underline sm:decoration-0 text-secondary"} >privacy</NavLink>
                 <NavLink to={'/terms'} className={"underline sm:decoration-0 text-secondary"} >terms and conditions</NavLink>
                 <NavLink to={'/guarantee'} className={"underline sm:decoration-0 text-secondary"} >host guarantee</NavLink>
             </div>
-        </div>
+        </footer>
     )
 }
 
@@ -107,4 +106,4 @@ const Footer = () => {
     )
 }
 
-export default Footer   
+export default Footer

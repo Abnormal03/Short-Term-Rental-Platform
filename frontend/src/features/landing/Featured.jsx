@@ -5,10 +5,11 @@ import { Spinner } from '../../components/UI/Spinner'
 import { Badge } from '../../components/UI/Badge'
 import { Verified,Dot } from "lucide-react"
 import Button from '../../components/UI/Botton'
+import RetryButton from '../../components/UI/RetryButton'
 
 const Featured = () => {
 
-    const { data: properties, isLoading, error } = useFeaturedProperties(4);
+    const { data: properties, isLoading, error, refetch, isFetching } = useFeaturedProperties(4);
     return (
         <div>
             <div className='flex items-center justify-between px-3 lg:px-10 mt-10'>
@@ -24,8 +25,8 @@ const Featured = () => {
                     <Spinner />
                     fetching featured properties...
                 </div> :
-                    !properties || error ? <div className='text-center h-50 w-100 md:w-full flex items-center justify-center bg-bg/25 rounded-2xl shadow-lg'>
-                        failed to load featured properties...
+                    !properties || error ? <div className='text-center min-h-50 w-full flex flex-col gap-3 items-center justify-center bg-bg/25 rounded-2xl shadow-lg'>
+                        <p role="alert" className="text-danger">Failed to load featured properties.</p><RetryButton onRetry={refetch} isRetrying={isFetching}/>
                     </div> :
                         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 my-10 mx-2 sm:mx-10'>
                             {properties.map((property) => (

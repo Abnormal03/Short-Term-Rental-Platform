@@ -4,39 +4,19 @@
   --font-sans: 'Sora', sans-serif;
   --color-primary: var(--primary);
   --color-secondary: var(--secondary);
+  --color-tertiary: var(--tertiary);
   --color-bg: var(--bg);
   --color-bg-2: var(--bg-2);
+  --color-surface: var(--surface);
   --color-neutral: var(--neutral);
+  --color-text: var(--text);
   --color-app-text: var(--text);
   --color-text-2: var(--text-2);
   --color-border: var(--border);
   --color-button-text: var(--button-text);
-}
-
-:root {
-  --bg: #ffffff;
-  --bg-2: #F0F3FF;
-  --primary: #1B6B45;
-  --secondary: #F59E0B;
-  --tertiary: #0D3D27;
-  --neutral: #F3F4F6;
-  --text: #334155;
-  --text-2: #fff;
-  --border: #E5E7EB;
-  --button-text: #fff;
-}
-
-:root.dark {
-  --bg: #0f172a;
-  --bg-2: #1e293b;
-  --primary: #2D9E61;
-  --secondary: #F59E0B;
-  --tertiary: #f59e0b;
-  --neutral: #1e293b;
-  --text: #f1f5f9;
-  --text-2: #000;
-  --border: #334155;
-  --button-text: #ffff;
+  --color-on-secondary: var(--on-secondary);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
 }
 
 body {

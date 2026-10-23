@@ -9,7 +9,7 @@ const sizes = {
 export function Spinner({ size = 'md', className }) {
     return (
         <div className={cn(
-            'rounded-full border-gray-200 border-t-primary animate-spin',
+            'rounded-full border-border border-t-primary animate-spin',
             sizes[size],
             className
         )} />
