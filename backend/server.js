@@ -28,6 +28,7 @@ app.use(cors({
 
 // Webhook routes use raw body — must be registered before express.json()
 app.post('/webhooks/clerk', express.raw({ type: "application/json" }), syncUser);
+app.get('/webhooks/chapa', handleUpdate);
 app.post('/webhooks/chapa', express.raw({ type: "application/json" }), handleUpdate);
 
 app.use(express.json());

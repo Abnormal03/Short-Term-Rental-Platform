@@ -93,18 +93,37 @@ const failSuccessPayment = async (transactionRef, payment_method, success) => {
 };
 
 const verifyAndUpdatePayment = async (tx_ref, payment_method) => {
-    try {
-        const verificationData = await verifyPayment(tx_ref);
+    const payment = await prisma.payment.findUnique({
+        where: { transaction_reference: tx_ref }
+    });
+    if (!payment) throw new Error('Transaction reference not found in database.');
 
-        if (verificationData.status === 'success' && verificationData.data?.status === 'success') {
-            await failSuccessPayment(tx_ref, payment_method, true);
-            return { success: true };
-        }
-
-        throw new Error('Error while verifying payment status from Chapa!');
-    } catch (error) {
-        throw new Error(error.message);
+    const verification = await verifyPayment(tx_ref);
+    const details = verification?.data;
+    const verifiedRef = details?.tx_ref;
+    if (!details || (verifiedRef && verifiedRef !== tx_ref)) {
+        throw new Error('Chapa verification did not match this transaction.');
     }
+
+    const status = String(details.status || '').toLowerCase();
+    const method = payment_method || details.method || payment.payment_method;
+    if (status === 'success') {
+        const amount = Number(details.amount);
+        const expectedAmount = Number(payment.amount);
+        const currency = String(details.currency || '').toUpperCase();
+        if (!Number.isFinite(amount) || amount !== expectedAmount || currency !== 'ETB') {
+            throw new Error('Verified payment amount or currency does not match the booking.');
+        }
+        await failSuccessPayment(tx_ref, method, true);
+        return { success: true, state: 'success' };
+    }
+
+    if (['failed', 'cancelled', 'canceled', 'expired', 'failed/cancelled'].includes(status)) {
+        await failSuccessPayment(tx_ref, method, false);
+        return { success: true, state: 'failed' };
+    }
+
+    return { success: false, state: 'pending' };
 };
 const refund = async (tx_ref) => {
     try {
@@ -157,4 +176,4 @@ const verifyPayment = async (tx_ref) => {
 };
 
 
-module.exports = { initializePayment, failSuccessPayment, verifyAndUpdatePayment, refund }
+module.exports = { initializePayment, failSuccessPayment, verifyPayment, verifyAndUpdatePayment, refund }
