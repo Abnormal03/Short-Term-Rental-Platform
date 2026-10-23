@@ -72,7 +72,8 @@ const getMe = async (req, res) => {
         return res.status(200).json({
             success: true,
             role: Role,
-            phoneNumber: phone_number
+            phoneNumber: phone_number,
+            profileComplete: Role === 'ADMIN' || Boolean(phone_number?.trim())
         })
     } catch (error) {
         console.log("Get Me Error: ", error.message);

@@ -23,7 +23,7 @@ const getProperties = async (req, res) => {
 
         return res.status(200).json({ success: true, properties, count });
     } catch (error) {
-        return res.status(500).json({ success: false, message: error.message });
+        return res.status(error.status || 500).json({ success: false, message: error.message });
     }
 }
 
@@ -31,7 +31,8 @@ const getPropertyDetails = async (req, res) => {
     try {
         const { id } = req.params;
 
-        const property = await propertyDetail(id);
+        const { userId } = getAuth(req);
+        const property = await propertyDetail(id, Boolean(userId));
 
         if (!property) {
             return res.status(404).json({ success: false, message: "Property not found." });
@@ -60,18 +61,24 @@ const getUserProperties = async (req, res) => {
 const createProperty = async (req, res) => {
     try {
         const { userId: clerkId } = getAuth(req);
-        const { title, description, city, country, price_per_night, min_stay_duration, max_stay_duration, property_images, amenities } = req.body;
+        const { title, description, city, country, price_per_night, min_stay_duration, max_stay_duration, property_images, amenities, availability } = req.body;
+        const availableFrom = new Date(availability?.available_from);
+        const availableTo = new Date(availability?.available_to);
 
         if (!title?.trim() || !description?.trim() || !city?.trim() || !country?.trim() ||
             !Number.isFinite(Number(price_per_night)) || Number(price_per_night) <= 0 ||
             !Number.isInteger(Number(min_stay_duration)) || !Number.isInteger(Number(max_stay_duration)) ||
             Number(min_stay_duration) < 1 || Number(max_stay_duration) < Number(min_stay_duration) ||
-            (property_images !== undefined && !Array.isArray(property_images))) {
+            !Number.isFinite(availableFrom.getTime()) || !Number.isFinite(availableTo.getTime()) || availableFrom >= availableTo ||
+            (property_images !== undefined && !Array.isArray(property_images)) ||
+            (amenities !== undefined && !Array.isArray(amenities))) {
             return res.status(400).json({ success: false, message: "Full information not provided." });
         }
 
         const data = {
-            title, description, city, country, price_per_night, min_stay_duration, max_stay_duration, property_images, amenities
+            title, description, city, country, price_per_night: Number(price_per_night),
+            min_stay_duration: Number(min_stay_duration), max_stay_duration: Number(max_stay_duration),
+            property_images, amenities, availability
         }
 
         const property = await addNewProperty(data, clerkId);
@@ -103,10 +110,10 @@ const deleteProperty = async (req, res) => {
         if (deletedProperty) {
             return res.status(200).json({ success: true, deletedProperty });
         }
-        return res.status(500).json({ success: false, message: "Unable to delete property." });
+        return res.status(404).json({ success: false, message: "Property not found or you are not the owner." });
     } catch (error) {
         console.log(error);
-        return res.status(500).json({ success: false, message: error.message });
+        return res.status(error.status || 500).json({ success: false, message: error.message });
     }
 }
 
@@ -129,21 +136,32 @@ const updateProperty = async (req, res) => {
     try {
         const { userId } = getAuth(req);
         const { propertyId } = req.params;
-        const { title, description, city, country, price_per_night, min_stay_duration, max_stay_duration, property_images } = req.body;
+        const { title, description, city, country, price_per_night, min_stay_duration, max_stay_duration, property_images, amenities } = req.body;
+
+        if (!title?.trim() || !description?.trim() || !city?.trim() || !country?.trim() ||
+            !Number.isFinite(Number(price_per_night)) || Number(price_per_night) <= 0 ||
+            !Number.isInteger(Number(min_stay_duration)) || !Number.isInteger(Number(max_stay_duration)) ||
+            Number(min_stay_duration) < 1 || Number(max_stay_duration) < Number(min_stay_duration) ||
+            (property_images !== undefined && !Array.isArray(property_images)) ||
+            (amenities !== undefined && !Array.isArray(amenities))) {
+            return res.status(400).json({ success: false, message: 'Property details are invalid.' });
+        }
 
         const property = {
-            title, description, city, country, price_per_night, min_stay_duration, max_stay_duration, property_images
+            title, description, city, country, price_per_night: Number(price_per_night),
+            min_stay_duration: Number(min_stay_duration), max_stay_duration: Number(max_stay_duration),
+            property_images, amenities
         };
 
         const updatedProperty = await propertyUpdate(propertyId, userId, property);
 
         if (!updatedProperty) {
-            return res.status(400).json({ success: false, message: 'Failed to update property.' });
+            return res.status(404).json({ success: false, message: 'Property not found or you are not the owner.' });
         }
 
         return res.status(200).json({ success: true, updatedProperty });
     } catch (error) {
-        return res.status(500).json({ success: false, message: error.message });
+        return res.status(error.status || 500).json({ success: false, message: error.message });
     }
 }
 
@@ -151,6 +169,10 @@ const approveProperty = async (req, res) => {
     try {
         const { propertyId } = req.params;
         const { approved } = req.body;
+
+        if (typeof approved !== 'boolean') {
+            return res.status(400).json({ success: false, message: 'The approved field must be a boolean.' });
+        }
 
         const approvedProperty = await approveProp(propertyId, approved);
 
@@ -160,7 +182,7 @@ const approveProperty = async (req, res) => {
 
         return res.status(200).json({ success: true, approvedProperty });
     } catch (error) {
-        return res.status(500).json({ success: false, message: error.message });
+        return res.status(error.status || 500).json({ success: false, message: error.message });
     }
 }
 
@@ -177,7 +199,7 @@ const getPropertiesByCity = async (req, res) => {
         }
         return res.status(200).json({ success: true, properties, count });
     } catch (error) {
-        return res.status(500).json({ success: false, message: error.message });
+        return res.status(error.status || 500).json({ success: false, message: error.message });
     }
 }
 
@@ -196,7 +218,7 @@ const updateAvailability = async (req, res) => {
 
         return res.status(200).json({ success: true, updatedProperty });
     } catch (error) {
-        return res.status(500).json({ success: false, message: error.message });
+        return res.status(error.status || 500).json({ success: false, message: error.message });
     }
 }
 

@@ -172,11 +172,7 @@ const getAllDisputesService = async (page, limit) => {
             take: limit
         })
 
-        if (!disputes || disputes.length === 0) {
-            throw new Error('No open disputes found');
-        }
-
-        return disputes;
+        return disputes || [];
     } catch (error) {
         console.error('Error fetching all disputes:', error.message);
         throw new Error(error.message);

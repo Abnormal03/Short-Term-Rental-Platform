@@ -6,7 +6,7 @@ const { updateUserRole, getAllUsers, verifyHost, getUserProfile, updateUserProfi
 const router = express.Router();
 
 //set user role...
-router.put('/user/update-user', verifyRole(['GUEST']), updateUserRole);
+router.put('/user/update-user', verifyRole(['GUEST', 'HOST']), updateUserRole);
 
 //update language preference...
 router.put('/user/update-language', verifyRole(['GUEST', 'HOST', 'ADMIN']), updatePreference);

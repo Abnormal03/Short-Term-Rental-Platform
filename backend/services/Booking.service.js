@@ -1,6 +1,8 @@
 const prisma = require("../config/db");
 
 const { refund: chapaRefund } = require('./Chapa.service')
+const SERVICE_FEE = 500;
+const CLEANING_FEE = 800;
 
 const createBooking = async (booking, clerkId, propertyId) => {
     try {
@@ -61,7 +63,7 @@ const createBooking = async (booking, clerkId, propertyId) => {
                 }
             })
             if (!user) throw new Error('Guest account not found.');
-            const totalPrice = Number((durationInDays * property.price_per_night).toFixed(2));
+            const totalPrice = Number((durationInDays * property.price_per_night + SERVICE_FEE + CLEANING_FEE).toFixed(2));
             //Create Booking....
             return await tx.booking.create({
                 data: {
@@ -198,7 +200,7 @@ const cancelBook = async (bookingId, clerkId, reason) => {
 }
 
 
-const propertyBookings = async (propertyId, page, limit) => {
+const propertyBookings = async (propertyId, clerkId, page, limit) => {
     try {
         if (!page || page < 1) {
             throw new Error('Page must be a positive integer');
@@ -207,22 +209,22 @@ const propertyBookings = async (propertyId, page, limit) => {
             throw new Error('Limit must be between 1 and 100');
         }
         const skip = (page - 1) * limit;
+        const requester = await prisma.user.findUnique({
+            where: { Clerk_id: clerkId },
+            select: { Role: true }
+        });
+        if (!requester) throw new Error('User not found.');
+        const where = { property_id: propertyId };
+        if (requester.Role !== 'ADMIN') {
+            where.property = { host: { Clerk_id: clerkId } };
+        }
         const bookings = await prisma.booking.findMany({
-            where: {
-                property_id: propertyId
-            },
+            where,
             skip,
             take: limit
         })
 
-        const count = await prisma.booking.count({
-            where: {
-                property_id: propertyId
-            }
-        })
-        if (count === 0 || bookings?.length === 0) {
-            throw new Error('No booking found.')
-        }
+        const count = await prisma.booking.count({ where })
         return { bookings, count };
     } catch (error) {
         console.log(error.message);
@@ -343,7 +345,15 @@ const guestBookings = async (guestId) => {
         if (!guest) return [];
         const bookings = await prisma.booking.findMany({
             where: { user_id: guest.user_id },
-            include: { property: { include: { propertyImages: true } }, payment: true },
+            include: {
+                property: {
+                    include: {
+                        propertyImages: true,
+                        host: { select: { name: true } },
+                    },
+                },
+                payment: true,
+            },
             orderBy: { created_at: 'desc' }
         })
         return bookings;
@@ -373,6 +383,7 @@ const bookingDetail = async (bookingId, guestId) => {
                 payment: true,
                 property: {
                     include: {
+                        propertyImages: true,
                         host: true
                     }
                 }

@@ -38,10 +38,11 @@ const addBooking = async (req, res) => {
 const cancelBooking = async (req, res) => {
     try {
         const { bookingId } = req.params;
+        const { userId } = getAuth(req);
         // BUG FIX: `body` could be null, then `body.reason` throws a TypeError — use optional chaining
         const reason = req.body?.reason ?? null;
 
-        const canceledBooking = await cancelBook(bookingId, reason);
+        const canceledBooking = await cancelBook(bookingId, userId, reason);
 
         if (canceledBooking) {
             return res.status(200).json({ success: true, canceledBooking });
@@ -56,9 +57,10 @@ const cancelBooking = async (req, res) => {
 const getPropertyBookings = async (req, res) => {
     try {
         const { propertyId } = req.params;
+        const { userId } = getAuth(req);
         const { page, limit } = req.query;
 
-        const { bookings, count } = await propertyBookings(propertyId, Number(page) || 1, Number(limit) || 20);
+        const { bookings, count } = await propertyBookings(propertyId, userId, Number(page) || 1, Number(limit) || 20);
 
         if (bookings) {
             return res.status(200).json({ success: true, bookings, count });

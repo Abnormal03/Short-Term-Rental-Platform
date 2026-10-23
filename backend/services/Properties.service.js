@@ -29,7 +29,6 @@ const getAllProperties = async (page, limit) => {
                 host: {
                     select: {
                         name: true,
-                        email: true,
                     }
                 },
                 propertyImages: {
@@ -57,10 +56,6 @@ const getAllProperties = async (page, limit) => {
             throw new Error('unable to get products')
         }
 
-        if (count === 0) {
-            throw new Error('No property found.')
-        }
-
         return { properties, count };
     } catch (error) {
         console.log(error.message);
@@ -81,6 +76,7 @@ const getUserProperty = async (id, page, limit) => {
                     deleted_at: null
                 }
             },
+            include: { availabilities: true, propertyImages: true },
             skip: skip,
             take: limit
         })
@@ -95,10 +91,6 @@ const getUserProperty = async (id, page, limit) => {
         })
         if (!properties) {
             throw new Error('unable to get products')
-        }
-
-        if (count === 0) {
-            throw new Error('No property found');
         }
 
         return { properties, count };
@@ -128,7 +120,13 @@ const addNewProperty = async (property, userId) => {
                 max_stay_duration: property.max_stay_duration,
                 host_id: host.user_id,
                 ...(imageData.length > 0 && { propertyImages: { createMany: { data: imageData } } }),
-                amenities: property.amenities
+                amenities: Array.isArray(property.amenities) ? property.amenities : [],
+                availabilities: {
+                    create: {
+                        available_from: new Date(property.availability.available_from),
+                        available_to: new Date(property.availability.available_to)
+                    }
+                }
             },
         })
 
@@ -152,6 +150,11 @@ const getunverifiedProperty = async (page, limit) => {
             where: {
                 verification_status: "PENDING",
                 deleted_at: null
+            },
+            include: {
+                host: { select: { name: true, email: true } },
+                propertyImages: { select: { image_id: true, image_url: true } },
+                availabilities: true,
             },
             skip: skip,
             take: limit
@@ -294,12 +297,8 @@ const deletedProperties = async (page, limit) => {
 
 
 const propertyUpdate = async (propertyId, clerkId, property) => {
-
-    if (property.property_images.length >= 1) {
-        property.property_images = property.property_images.map(image => ({
-            image_url: image
-        }))
-    }
+    const imageData = (Array.isArray(property.property_images) ? property.property_images : [])
+        .map((image) => ({ image_url: image }));
     try {
         return await prisma.$transaction(async (tx) => {
             // get the user...
@@ -308,11 +307,13 @@ const propertyUpdate = async (propertyId, clerkId, property) => {
                     Clerk_id: clerkId
                 }
             })
+            if (!user) throw new Error('Host account not found.');
 
             const formerProperty = await tx.property.findFirst({
                 where: {
                     property_id: propertyId,
-                    host_id: user.user_id
+                    host_id: user.user_id,
+                    deleted_at: null,
                 },
                 include: {
                     propertyImages: {
@@ -322,6 +323,7 @@ const propertyUpdate = async (propertyId, clerkId, property) => {
                     }
                 }
             })
+            if (!formerProperty) return null
 
             const updatedProperty = await tx.property.update({
                 where: {
@@ -336,12 +338,12 @@ const propertyUpdate = async (propertyId, clerkId, property) => {
                     price_per_night: property.price_per_night,
                     min_stay_duration: property.min_stay_duration,
                     max_stay_duration: property.max_stay_duration,
+                    verification_status: 'PENDING',
+                    amenities: Array.isArray(property.amenities) ? property.amenities : [],
                     host_id: user.user_id,
                     propertyImages: {
                         deleteMany: {},
-                        createMany: {
-                            data: property.property_images
-                        }
+                        ...(imageData.length > 0 && { createMany: { data: imageData } })
                     }
                 },
                 include: {
@@ -382,7 +384,7 @@ const approveProp = async (propertyId, approved) => {
     }
 }
 
-const propertyDetail = async (propertyId) => {
+const propertyDetail = async (propertyId, includeHostContact = false) => {
     try {
         const property = await prisma.property.findFirst({
             where: {
@@ -400,9 +402,8 @@ const propertyDetail = async (propertyId) => {
                 host: {
                     select: {
                         name: true,
-                        email: true,
-                        phone_number: true,
-                        is_verified_host: true
+                        is_verified_host: true,
+                        ...(includeHostContact && { email: true, phone_number: true }),
                     }
                 },
                 propertyImages: {
@@ -446,7 +447,6 @@ const propertyByCity = async (city, page, limit) => {
                 host: {
                     select: {
                         name: true,
-                        email: true,
                         is_verified_host: true
                     }
                 },
@@ -489,12 +489,15 @@ const availabilityUpdate = async (propertyId, userId, availability) => {
             const exists = await tx.property.findFirst({
                 where: {
                     property_id: propertyId,
-                    host_id: host.user_id
+                    host_id: host.user_id,
+                    deleted_at: null,
                 }
             })
 
             if (!exists) {
-                throw new Error('Property not found or you are not the owner of the property.')
+                const error = new Error('Property not found or you are not the owner of the property.')
+                error.status = 404
+                throw error
             }
 
             const updatedProperty = await tx.property.update({
