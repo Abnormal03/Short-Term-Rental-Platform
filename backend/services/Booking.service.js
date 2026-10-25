@@ -6,6 +6,11 @@ const CLEANING_FEE = 800;
 
 const createBooking = async (booking, clerkId, propertyId) => {
     try {
+        const checkIn = new Date(booking.checkInDate);
+        const checkOut = new Date(booking.checkOutDate);
+        if (!Number.isFinite(checkIn.getTime()) || !Number.isFinite(checkOut.getTime())) {
+            throw new Error('Choose valid check-in and check-out dates.');
+        }
         return await prisma.$transaction(async (tx) => {
             const property = await tx.property.findFirst({
                 where: {
@@ -15,6 +20,9 @@ const createBooking = async (booking, clerkId, propertyId) => {
                 },
                 include: {
                     availabilities: true,
+                    availabilityOverrides: {
+                        where: { date: { gte: checkIn, lt: checkOut } },
+                    },
                     bookings: {
                         where: {
                             booking_status: { notIn: ["CANCELLED", "COMPLETED"] }
@@ -27,13 +35,14 @@ const createBooking = async (booking, clerkId, propertyId) => {
             if (!property) throw new Error('Property not found or not approved.');
 
             //Calculate Stay Duration in Days...
-            const checkIn = new Date(booking.checkInDate);
-            const checkOut = new Date(booking.checkOutDate);
             const durationInDays = (checkOut - checkIn) / (1000 * 60 * 60 * 24);
 
+            const dateKey = (date) => new Date(date).toISOString().slice(0, 10);
+            const dateOverrides = new Map(property.availabilityOverrides.map((override) => [dateKey(override.date), override]));
+            const requiredMinimum = dateOverrides.get(dateKey(checkIn))?.min_stay_duration || property.min_stay_duration;
             if (!Number.isInteger(durationInDays) || durationInDays <= 0 ||
-                durationInDays < property.min_stay_duration || durationInDays > property.max_stay_duration) {
-                throw new Error(`Stay duration must be between ${property.min_stay_duration} and ${property.max_stay_duration} days.`);
+                durationInDays < requiredMinimum || durationInDays > property.max_stay_duration) {
+                throw new Error(`Stay duration must be between ${requiredMinimum} and ${property.max_stay_duration} days.`);
             }
 
             //Check General Availability Range...
@@ -41,7 +50,6 @@ const createBooking = async (booking, clerkId, propertyId) => {
                 throw new Error('Property availability has not been configured.');
             }
             const { available_from, available_to } = property.availabilities;
-            const dateKey = (date) => new Date(date).toISOString().slice(0, 10);
             const todayKey = new Date().toISOString().slice(0, 10);
             if (dateKey(checkIn) < todayKey || dateKey(checkIn) < dateKey(available_from) || dateKey(checkOut) > dateKey(available_to)) {
                 throw new Error('Property is not available for these dates.');
@@ -58,6 +66,15 @@ const createBooking = async (booking, clerkId, propertyId) => {
                 throw new Error('Property is already booked for these dates.');
             }
 
+            let stayPrice = 0;
+            for (let night = new Date(checkIn); night < checkOut; night.setUTCDate(night.getUTCDate() + 1)) {
+                const override = dateOverrides.get(dateKey(night));
+                if (override?.is_available === false) {
+                    throw new Error('Property is blocked for one or more selected dates.');
+                }
+                stayPrice += override?.price_per_night ?? property.price_per_night;
+            }
+
             //get the user and clerkId
             const user = await tx.user.findFirst({
                 where: {
@@ -65,7 +82,7 @@ const createBooking = async (booking, clerkId, propertyId) => {
                 }
             })
             if (!user) throw new Error('Guest account not found.');
-            const totalPrice = Number((durationInDays * property.price_per_night + SERVICE_FEE + CLEANING_FEE).toFixed(2));
+            const totalPrice = Number((stayPrice + SERVICE_FEE + CLEANING_FEE).toFixed(2));
             //Create Booking....
             return await tx.booking.create({
                 data: {

@@ -1,4 +1,4 @@
-const { getProperties, getUserProperties, createProperty, getUnverifiedProperties, deleteProperty, getDeletedProperties, updateProperty, approveProperty, getPropertyDetails, getPropertiesByCity, updateAvailability, featuredProperties } = require('../controllers/Properties.controller')
+const { getProperties, getUserProperties, createProperty, getUnverifiedProperties, deleteProperty, getDeletedProperties, updateProperty, approveProperty, getPropertyDetails, getPropertiesByCity, updateAvailability, getCalendar, updateCalendar, featuredProperties } = require('../controllers/Properties.controller')
 const { verifyRole } = require('../middlewares/Role.middleware');
 const express = require('express');
 
@@ -31,6 +31,8 @@ router.get('/city/:city', getPropertiesByCity);
 
 //udpated availablity of the property... host only
 router.put('/availability/:propertyId', verifyRole(['HOST']), updateAvailability);
+router.get('/calendar/:propertyId', verifyRole(['HOST']), getCalendar);
+router.put('/calendar/:propertyId', verifyRole(['HOST']), updateCalendar);
 
 //property details
 router.get('/:id', getPropertyDetails);

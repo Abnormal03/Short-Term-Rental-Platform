@@ -27,7 +27,7 @@ const addBooking = async (req, res) => {
 
         const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
         const returnUrl = `${frontendUrl}/bookings/${newBooking.booking_id}/confirmation`;
-        const initialize = await initializePayment(paymentDetail, returnUrl);
+        const initialize = await initializePayment({ ...paymentDetail, price: newBooking.total_price }, returnUrl);
 
         if (!initialize.success) {
             await paymentSuccessfulFail(newBooking.booking_id, false);

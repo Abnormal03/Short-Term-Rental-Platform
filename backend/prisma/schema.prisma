@@ -64,6 +64,7 @@ model Property {
   propertyImages      PropertyImage[]
   bookings            Booking[]
   availabilities      Availability?
+  availabilityOverrides AvailabilityOverride[]
 }
 
 enum VerificationStatus {
@@ -148,6 +149,19 @@ model Availability {
   available_from  DateTime
   available_to    DateTime
   property        Property @relation(fields: [property_id], references: [property_id])
+}
+
+model AvailabilityOverride {
+  availability_override_id String   @id @default(uuid())
+  property_id              String
+  date                     DateTime @db.Date
+  is_available             Boolean  @default(true)
+  price_per_night          Float?
+  min_stay_duration        Int?
+  property                 Property @relation(fields: [property_id], references: [property_id], onDelete: Cascade)
+
+  @@unique([property_id, date])
+  @@index([property_id, date])
 }
 
 model Language_preference {

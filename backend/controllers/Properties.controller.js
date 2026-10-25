@@ -12,6 +12,8 @@ const {
     propertyDetail,
     propertyByCity,
     availabilityUpdate,
+    getPropertyCalendar: fetchPropertyCalendar,
+    updatePropertyCalendar: savePropertyCalendar,
     getFeaturedProperties
 } = require("../services/Properties.service");
 
@@ -225,6 +227,26 @@ const updateAvailability = async (req, res) => {
     }
 }
 
+const getCalendar = async (req, res) => {
+    try {
+        const { userId } = getAuth(req)
+        const property = await fetchPropertyCalendar(req.params.propertyId, userId, req.query.from, req.query.to)
+        return res.status(200).json({ success: true, property })
+    } catch (error) {
+        return res.status(error.status || 500).json({ success: false, message: error.message || 'Could not load property calendar.' })
+    }
+}
+
+const updateCalendar = async (req, res) => {
+    try {
+        const { userId } = getAuth(req)
+        const overrides = await savePropertyCalendar(req.params.propertyId, userId, req.body?.overrides)
+        return res.status(200).json({ success: true, overrides })
+    } catch (error) {
+        return res.status(error.status || 500).json({ success: false, message: error.message || 'Could not save calendar changes.' })
+    }
+}
+
 
 const featuredProperties = async (req, res) => {
     try {
@@ -252,5 +274,7 @@ module.exports = {
     getPropertyDetails,
     getPropertiesByCity,
     updateAvailability,
+    getCalendar,
+    updateCalendar,
     featuredProperties
 }
