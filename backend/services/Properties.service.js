@@ -152,7 +152,7 @@ const getunverifiedProperty = async (page, limit) => {
                 deleted_at: null
             },
             include: {
-                host: { select: { name: true, email: true } },
+                host: { select: { user_id: true, name: true, email: true, phone_number: true, is_verified_host: true, host_review_status: true } },
                 propertyImages: { select: { image_id: true, image_url: true } },
                 availabilities: true,
             },
@@ -177,6 +177,60 @@ const getunverifiedProperty = async (page, limit) => {
         throw new Error(error.message || 'unable to create Propduct!');
     }
 }
+
+const getAdminProperties = async ({ page, limit, status, city, search, sort }) => {
+    validatePagination(page, limit)
+    const statuses = ['PENDING', 'APPROVED', 'REJECTED']
+    const normalizedStatus = String(status || 'PENDING').toUpperCase()
+    if (!statuses.includes(normalizedStatus)) throw new Error('Unsupported property review status')
+    const where = { verification_status: normalizedStatus, deleted_at: null }
+    if (city) where.city = { equals: String(city), mode: 'insensitive' }
+    if (search) {
+        where.OR = [
+            { title: { contains: String(search), mode: 'insensitive' } },
+            { city: { contains: String(search), mode: 'insensitive' } },
+            { host: { is: { name: { contains: String(search), mode: 'insensitive' } } } },
+            { host: { is: { email: { contains: String(search), mode: 'insensitive' } } } },
+        ]
+    }
+    const order = String(sort).toLowerCase() === 'oldest' ? 'asc' : 'desc'
+    const [properties, count, cities, groupedStatuses] = await Promise.all([
+        prisma.property.findMany({
+            where,
+            include: {
+                host: { select: { user_id: true, name: true, email: true, phone_number: true, is_verified_host: true, host_review_status: true } },
+                propertyImages: { select: { image_id: true, image_url: true } },
+                availabilities: true,
+            },
+            orderBy: { create_at: order },
+            skip: (page - 1) * limit,
+            take: limit,
+        }),
+        prisma.property.count({ where }),
+        prisma.property.findMany({
+            where: { verification_status: normalizedStatus, deleted_at: null },
+            distinct: ['city'],
+            select: { city: true },
+            orderBy: { city: 'asc' },
+        }),
+        prisma.property.groupBy({
+            by: ['verification_status'],
+            where: { deleted_at: null },
+            _count: { _all: true },
+        }),
+    ])
+    const statusCounts = Object.fromEntries(groupedStatuses.map(({ verification_status, _count }) => [verification_status, _count._all]))
+    return { properties, count, cities: cities.map(({ city: propertyCity }) => propertyCity), statusCounts }
+}
+
+const getAdminPropertyDetail = async (propertyId) => prisma.property.findFirst({
+    where: { property_id: propertyId, deleted_at: null },
+    include: {
+        host: { select: { user_id: true, name: true, email: true, phone_number: true, is_verified_host: true, host_review_status: true } },
+        propertyImages: { select: { image_id: true, image_url: true } },
+        availabilities: true,
+    },
+})
 
 const deleteUserProperty = async (hostId, id) => {
     try {
@@ -374,14 +428,16 @@ const propertyUpdate = async (propertyId, clerkId, property) => {
     }
 }
 
-const approveProp = async (propertyId, approved) => {
+const approveProp = async (propertyId, approved, note = null, message = null) => {
     try {
         const approvedProperty = await prisma.property.update({
             where: {
                 property_id: propertyId
             },
             data: {
-                verification_status: approved ? "APPROVED" : "REJECTED"
+                verification_status: approved ? "APPROVED" : "REJECTED",
+                admin_review_note: typeof note === 'string' ? note.trim() || null : null,
+                review_message: typeof message === 'string' ? message.trim() || null : null,
             }
         })
 
@@ -692,6 +748,8 @@ module.exports = {
     getUserProperty,
     addNewProperty,
     getunverifiedProperty,
+    getAdminProperties,
+    getAdminPropertyDetail,
     deleteUserProperty,
     deletedProperties,
     propertyUpdate,

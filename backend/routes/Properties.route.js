@@ -1,4 +1,4 @@
-const { getProperties, getUserProperties, createProperty, getUnverifiedProperties, deleteProperty, getDeletedProperties, updateProperty, approveProperty, getPropertyDetails, getPropertiesByCity, updateAvailability, getCalendar, updateCalendar, featuredProperties } = require('../controllers/Properties.controller')
+const { getProperties, getUserProperties, createProperty, getUnverifiedProperties, getAdminProperties, getAdminPropertyDetail, deleteProperty, getDeletedProperties, updateProperty, approveProperty, getPropertyDetails, getPropertiesByCity, updateAvailability, getCalendar, updateCalendar, featuredProperties } = require('../controllers/Properties.controller')
 const { verifyRole } = require('../middlewares/Role.middleware');
 const express = require('express');
 
@@ -9,16 +9,18 @@ const router = express.Router();
 router.get('/', getProperties)
 
 //update property....
-router.put('/update/:propertyId', verifyRole(['HOST']), updateProperty)
+router.put('/update/:propertyId', verifyRole(['HOST'], { requireActiveAccount: true }), updateProperty)
 
 //get featured properties...
 router.get('/featured', featuredProperties);
 
 //getting user's properties...
-router.get('/mine', verifyRole(['HOST']), getUserProperties);
+router.get('/mine', verifyRole(['HOST'], { requireActiveAccount: true }), getUserProperties);
 
 //get unverified properties...Admin Only
 router.get('/notverified', verifyRole(['ADMIN']), getUnverifiedProperties);
+router.get('/admin/all', verifyRole(['ADMIN']), getAdminProperties);
+router.get('/admin/:propertyId', verifyRole(['ADMIN']), getAdminPropertyDetail);
 
 //get deleted properties... Admin Only
 router.get('/deleted', verifyRole(['ADMIN']), getDeletedProperties);
@@ -30,18 +32,18 @@ router.put('/approve/:propertyId', verifyRole(['ADMIN']), approveProperty);
 router.get('/city/:city', getPropertiesByCity);
 
 //udpated availablity of the property... host only
-router.put('/availability/:propertyId', verifyRole(['HOST']), updateAvailability);
-router.get('/calendar/:propertyId', verifyRole(['HOST']), getCalendar);
-router.put('/calendar/:propertyId', verifyRole(['HOST']), updateCalendar);
+router.put('/availability/:propertyId', verifyRole(['HOST'], { requireActiveAccount: true }), updateAvailability);
+router.get('/calendar/:propertyId', verifyRole(['HOST'], { requireActiveAccount: true }), getCalendar);
+router.put('/calendar/:propertyId', verifyRole(['HOST'], { requireActiveAccount: true }), updateCalendar);
 
 //property details
 router.get('/:id', getPropertyDetails);
 
 //add a new properties...
-router.post('/', verifyRole(['HOST']), createProperty);
+router.post('/', verifyRole(['HOST'], { requireActiveAccount: true }), createProperty);
 
 
 //delete users' property...
-router.delete('/:id', verifyRole(['HOST']), deleteProperty)
+router.delete('/:id', verifyRole(['HOST'], { requireActiveAccount: true }), deleteProperty)
 
 module.exports = router;

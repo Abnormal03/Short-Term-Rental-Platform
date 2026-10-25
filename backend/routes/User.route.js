@@ -1,7 +1,7 @@
 const express = require('express');
 const { verifyRole } = require('../middlewares/Role.middleware');
 
-const { updateUserRole, getAllUsers, verifyHost, getUserProfile, updateUserProfile, getHostProfile, updatePreference } = require('../controllers/User.controller');
+const { updateUserRole, getAllUsers, getAdminUserDetail, reviewAdminUser, verifyHost, getUserProfile, updateUserProfile, getHostProfile, updatePreference } = require('../controllers/User.controller');
 
 const router = express.Router();
 
@@ -16,6 +16,8 @@ router.get('/all', verifyRole(['ADMIN']), getAllUsers);
 
 //verify host...
 router.put('/verify-host', verifyRole(['ADMIN']), verifyHost);
+router.get('/admin/:userId', verifyRole(['ADMIN']), getAdminUserDetail);
+router.put('/admin/:userId/review', verifyRole(['ADMIN']), reviewAdminUser);
 
 //delete user...
 // router.delete('/delete-user', verifyRole(['ADMIN']), deleteUser)

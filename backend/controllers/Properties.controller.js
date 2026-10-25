@@ -5,6 +5,8 @@ const {
     getUserProperty,
     addNewProperty,
     getunverifiedProperty,
+    getAdminProperties: getAdminPropertiesFromDB,
+    getAdminPropertyDetail: getAdminPropertyDetailFromDB,
     deleteUserProperty,
     deletedProperties,
     propertyUpdate,
@@ -102,6 +104,33 @@ const getUnverifiedProperties = async (req, res) => {
     }
 }
 
+const getAdminProperties = async (req, res) => {
+    try {
+        const { page = 1, limit = 20, status, city, search, sort } = req.query
+        const result = await getAdminPropertiesFromDB({
+            page: Number(page) || 1,
+            limit: Number(limit) || 20,
+            status,
+            city,
+            search,
+            sort,
+        })
+        return res.status(200).json({ success: true, ...result })
+    } catch (error) {
+        return res.status(error.status || 500).json({ success: false, message: error.message })
+    }
+}
+
+const getAdminPropertyDetail = async (req, res) => {
+    try {
+        const property = await getAdminPropertyDetailFromDB(req.params.propertyId)
+        if (!property) return res.status(404).json({ success: false, message: 'Property not found.' })
+        return res.status(200).json({ success: true, property })
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message || 'Failed to load property review.' })
+    }
+}
+
 const deleteProperty = async (req, res) => {
     try {
         const { id } = req.params;
@@ -173,13 +202,14 @@ const updateProperty = async (req, res) => {
 const approveProperty = async (req, res) => {
     try {
         const { propertyId } = req.params;
-        const { approved } = req.body;
+        const { approved, note, message } = req.body;
 
-        if (typeof approved !== 'boolean') {
-            return res.status(400).json({ success: false, message: 'The approved field must be a boolean.' });
+        if (typeof approved !== 'boolean' || (note !== undefined && (typeof note !== 'string' || note.length > 1000)) || (message !== undefined && (typeof message !== 'string' || message.length > 1000))) {
+            return res.status(400).json({ success: false, message: 'Provide an approval decision and a review note shorter than 1000 characters.' });
         }
+        if (!approved && !message?.trim()) return res.status(400).json({ success: false, message: 'A message to the host is required when requesting changes or rejecting a listing.' })
 
-        const approvedProperty = await approveProp(propertyId, approved);
+        const approvedProperty = await approveProp(propertyId, approved, note, message);
 
         if (!approvedProperty) {
             return res.status(400).json({ success: false, message: 'Failed to update property.' });
@@ -267,6 +297,8 @@ module.exports = {
     getUserProperties,
     createProperty,
     getUnverifiedProperties,
+    getAdminProperties,
+    getAdminPropertyDetail,
     deleteProperty,
     getDeletedProperties,
     updateProperty,

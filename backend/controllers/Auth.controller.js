@@ -67,12 +67,14 @@ const getMe = async (req, res) => {
                 message: "Couldn't find user!"
             })
         }
-        const { Role, phone_number } = me;
+        const { Role, phone_number, account_status, languagePreference } = me;
 
         return res.status(200).json({
             success: true,
             role: Role,
             phoneNumber: phone_number,
+            accountStatus: account_status,
+            language: languagePreference?.language_code || 'en',
             profileComplete: Role === 'ADMIN' || Boolean(phone_number?.trim())
         })
     } catch (error) {

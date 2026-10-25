@@ -1,5 +1,5 @@
 const { getAuth } = require('@clerk/express');
-const { updateRole, getAllUsersFromDB, verifyHost: getVerifiedHost, hostProfile, userProfile, updateUser, updatePref } = require('../services/User.service');
+const { updateRole, getAllUsersFromDB, verifyHost: getVerifiedHost, getAdminUserDetail: fetchAdminUserDetail, reviewAdminUser: saveAdminUserReview, hostProfile, userProfile, updateUser, updatePref } = require('../services/User.service');
 
 const updateUserRole = async (req, res) => {
     try {
@@ -31,15 +31,45 @@ const updateUserRole = async (req, res) => {
 const getAllUsers = async (req, res) => {
     try {
         const { userId } = getAuth(req);
-        const { page, limit } = req.query;
-        const { users, count } = await getAllUsersFromDB(userId, Number(page) || 1, Number(limit) || 20);
+        const { page, limit, role, search, needsAction, hostStatus, accountStatus, sort } = req.query;
+        const { users, count, roleCounts, unverifiedHosts, pendingGuests } = await getAllUsersFromDB(
+            userId,
+            Number(page) || 1,
+            Number(limit) || 20,
+            { role, search, needsAction: needsAction === 'true', hostStatus, accountStatus, sort }
+        );
 
         if (!users) {
             return res.status(404).json({ success: false, message: 'No users found.' });
         }
-        return res.status(200).json({ success: true, users, count });
+        return res.status(200).json({ success: true, users, count, roleCounts, unverifiedHosts, pendingGuests });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message || 'Failed to get all users.' });
+    }
+}
+
+const getAdminUserDetail = async (req, res) => {
+    try {
+        const user = await fetchAdminUserDetail(req.params.userId)
+        if (!user) return res.status(404).json({ success: false, message: 'User not found.' })
+        if (!['HOST', 'GUEST'].includes(user.Role)) return res.status(400).json({ success: false, message: 'Only host and guest accounts can be reviewed.' })
+        return res.status(200).json({ success: true, user })
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message || 'Failed to load user details.' })
+    }
+}
+
+const reviewAdminUser = async (req, res) => {
+    try {
+        const { decision, note, message } = req.body || {}
+        if (typeof decision !== 'string' || (note !== undefined && (typeof note !== 'string' || note.length > 1000)) || (message !== undefined && (typeof message !== 'string' || message.length > 1000))) {
+            return res.status(400).json({ success: false, message: 'Provide a supported decision and notes shorter than 1000 characters.' })
+        }
+        const user = await saveAdminUserReview(req.params.userId, decision, note, message)
+        if (!user) return res.status(404).json({ success: false, message: 'User not found.' })
+        return res.status(200).json({ success: true, user })
+    } catch (error) {
+        return res.status(400).json({ success: false, message: error.message || 'Unable to save this review.' })
     }
 }
 
@@ -158,6 +188,8 @@ const updatePreference = async (req, res) => {
 module.exports = {
     updateUserRole,
     getAllUsers,
+    getAdminUserDetail,
+    reviewAdminUser,
     verifyHost,
     getUserProfile,
     updateUserProfile,

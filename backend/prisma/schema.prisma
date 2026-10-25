@@ -13,23 +13,27 @@ datasource db {
 }
 
 model User {
-  user_id            String               @id @default(uuid())
-  Clerk_id           String               @unique
-  name               String
-  email              String               @unique
-  Role               Role                 @default(GUEST)
-  phone_number       String?              @unique
-  is_verified_host   Boolean              @default(false)
-  payment_preference PaymentPreference    @default(TELEBIRR)
-  booking_updates_enabled Boolean          @default(true)
-  host_messages_enabled   Boolean          @default(true)
-  offers_enabled          Boolean          @default(false)
-  create_at          DateTime             @default(now())
-  updated_at         DateTime             @updatedAt
-  properties         Property[]
-  bookings           Booking[]
-  languagePreference Language_preference?
-  disputes           Dispute[]
+  user_id                 String               @id @default(uuid())
+  Clerk_id                String               @unique
+  name                    String
+  email                   String               @unique
+  Role                    Role                 @default(GUEST)
+  account_status          AccountStatus        @default(ACTIVE)
+  host_review_status      HostReviewStatus     @default(PENDING)
+  admin_review_note       String?
+  review_message          String?
+  phone_number            String?              @unique
+  is_verified_host        Boolean              @default(false)
+  payment_preference      PaymentPreference    @default(TELEBIRR)
+  booking_updates_enabled Boolean              @default(true)
+  host_messages_enabled   Boolean              @default(true)
+  offers_enabled          Boolean              @default(false)
+  create_at               DateTime             @default(now())
+  updated_at              DateTime             @updatedAt
+  properties              Property[]
+  bookings                Booking[]
+  languagePreference      Language_preference?
+  disputes                Dispute[]
 }
 
 enum PaymentPreference {
@@ -45,25 +49,41 @@ enum Role {
   ADMIN
 }
 
+enum AccountStatus {
+  PENDING
+  ACTIVE
+  REJECTED
+  SUSPENDED
+}
+
+enum HostReviewStatus {
+  PENDING
+  VERIFIED
+  NEEDS_CHANGES
+  REJECTED
+}
+
 model Property {
-  property_id         String             @id @default(uuid())
-  title               String
-  description         String
-  city                String
-  country             String
-  price_per_night     Float
-  min_stay_duration   Int
-  max_stay_duration   Int
-  amenities           String[]
-  verification_status VerificationStatus @default(PENDING)
-  host                User               @relation(fields: [host_id], references: [user_id])
-  host_id             String
-  create_at           DateTime           @default(now())
-  updated_at          DateTime           @updatedAt
-  deleted_at          DateTime?
-  propertyImages      PropertyImage[]
-  bookings            Booking[]
-  availabilities      Availability?
+  property_id           String                 @id @default(uuid())
+  title                 String
+  description           String
+  city                  String
+  country               String
+  price_per_night       Float
+  min_stay_duration     Int
+  max_stay_duration     Int
+  amenities             String[]
+  verification_status   VerificationStatus     @default(PENDING)
+  host                  User                   @relation(fields: [host_id], references: [user_id])
+  host_id               String
+  create_at             DateTime               @default(now())
+  updated_at            DateTime               @updatedAt
+  deleted_at            DateTime?
+  admin_review_note     String?
+  review_message        String?
+  propertyImages        PropertyImage[]
+  bookings              Booking[]
+  availabilities        Availability?
   availabilityOverrides AvailabilityOverride[]
 }
 

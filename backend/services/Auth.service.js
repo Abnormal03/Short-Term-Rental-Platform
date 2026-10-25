@@ -21,7 +21,8 @@ const createUser = async (user) => {
                 name,
                 email,
                 phone_number: user.phone_numbers?.[0]?.phone_number || null,
-                Role: "GUEST"
+                Role: "GUEST",
+                account_status: 'PENDING'
             },
         })
         console.log('user successfully created.')
@@ -59,7 +60,9 @@ const getMe = async (clerkId) => {
             },
             select: {
                 Role: true,
-                phone_number: true
+                phone_number: true,
+                account_status: true,
+                languagePreference: { select: { language_code: true } },
             }
         })
 

@@ -152,7 +152,7 @@ const resolveDisputeService = async (disputeId, resolution, action) => {
     }
 }
 
-const getAllDisputesService = async (page, limit) => {
+const getAllDisputesService = async (page, limit, status = 'OPEN') => {
     try {
         if (!page || page < 1) {
             throw new Error('Page must be a positive integer');
@@ -160,13 +160,15 @@ const getAllDisputesService = async (page, limit) => {
         if (!limit || limit < 1 || limit > 100) {
             throw new Error('Limit must be between 1 and 100');
         }
+        const normalizedStatus = String(status).toUpperCase()
+        if (!['OPEN', 'RESOLVED'].includes(normalizedStatus)) throw new Error('Unsupported dispute status')
+        const statusWhere = normalizedStatus === 'OPEN' ? { status: 'OPEN' } : { status: { in: ['RESOLVED', 'REJECTED'] } }
         const skip = (page - 1) * limit;
         const [disputes, count] = await prisma.$transaction([
         prisma.dispute.findMany({
-            where: {
-                status: 'OPEN'
-            },
+            where: statusWhere,
             include: {
+                user: { select: { name: true, email: true } },
                 booking: {
                     include: {
                         payment: { select: { payment_method: true, payment_status: true } },
@@ -179,7 +181,8 @@ const getAllDisputesService = async (page, limit) => {
                         property: {
                             select: {
                                 title: true,
-                                host_id: true
+                                host_id: true,
+                                host: { select: { name: true, email: true } },
                             }
                         }
                     }
@@ -188,7 +191,7 @@ const getAllDisputesService = async (page, limit) => {
             skip,
             take: limit
         }),
-        prisma.dispute.count({ where: { status: 'OPEN' } })
+        prisma.dispute.count({ where: statusWhere })
         ])
 
         return { disputes: disputes || [], count };

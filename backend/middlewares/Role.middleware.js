@@ -1,7 +1,7 @@
 const { getAuth } = require('@clerk/express');
 const prisma = require('../config/db');
 
-const verifyRole = (Role) => {
+const verifyRole = (Role, { requireActiveGuest = false, requireActiveAccount = false } = {}) => {
     return async (req, res, next) => {
         try {
             const { userId } = getAuth(req);
@@ -23,6 +23,9 @@ const verifyRole = (Role) => {
             const authorized = Role.some((role) => role === user.Role)
             if (!authorized) {
                 return res.status(403).json({ success: false, message: "unauthorized access!" })
+            }
+            if ((requireActiveAccount || (requireActiveGuest && user.Role === 'GUEST')) && user.account_status !== 'ACTIVE') {
+                return res.status(403).json({ success: false, code: 'GUEST_ACCOUNT_NOT_ACTIVE', message: 'Your guest account must be approved before using booking features.' })
             }
             next();
         } catch (error) {
