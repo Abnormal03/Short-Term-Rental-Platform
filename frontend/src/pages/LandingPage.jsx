@@ -2,6 +2,15 @@ import { useState } from 'react'
 import { ArrowRight, ArrowUpRight, Check, ChevronDown, Compass, CreditCard, Headphones, House, Menu, ShieldCheck, Sparkles, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { ThemeToggle } from '../components/UI/ThemeToggle'
+import addisImage from '../assets/Images/Addis Ababa.avif'
+import bahirDarImage from '../assets/Images/bahir dar.jpg'
+import lalibelaImage from '../assets/Images/lalibela.jpg'
+import hawassaImage from '../assets/Images/hawassa.jpg'
+import gondarImage from '../assets/Images/Gonder.jpg'
+import ethiopiaTwoImage from '../assets/Images/Ethiopia-2.jpg'
+import paymentsImage from '../assets/Images/local-payments.jpg'
+import ethiopiaOneImage from '../assets/Images/Ethiopia-1.jpg'
+import verifiedHomesImage from '../assets/Images/verified homes.jpg'
 
 const benefits = [
     { icon: ShieldCheck, title: 'Verified properties', copy: 'Listings are reviewed before they appear on Betoch.' },
@@ -13,11 +22,11 @@ const benefits = [
 ]
 
 const destinations = [
-    { name: 'Addis Ababa', note: 'City stays', color: 'from-emerald-800 to-emerald-400', image: "../../src/assets/Images/Addis Ababa.avif" },
-    { name: 'Bahir Dar', note: 'Lakeside escapes', color: 'from-sky-900 to-sky-400', image: "../../src/assets/Images/bahir dar.jpg" },
-    { name: 'Lalibela', note: 'History and heritage', color: 'from-amber-800 to-amber-400', image: "../../src/assets/Images/lalibela.jpg" },
-    { name: 'Hawassa', note: 'A slower pace', color: 'from-lime-900 to-lime-500', image: "../../src/assets/Images/hawassa.jpg" },
-    { name: 'Gondar', note: 'Castles and culture', color: 'from-orange-900 to-orange-400', image: "../../src/assets/Images/Gonder.jpg" },
+    { name: 'Addis Ababa', note: 'City stays', color: 'from-emerald-800 to-emerald-400', image: addisImage },
+    { name: 'Bahir Dar', note: 'Lakeside escapes', color: 'from-sky-900 to-sky-400', image: bahirDarImage },
+    { name: 'Lalibela', note: 'History and heritage', color: 'from-amber-800 to-amber-400', image: lalibelaImage },
+    { name: 'Hawassa', note: 'A slower pace', color: 'from-lime-900 to-lime-500', image: hawassaImage },
+    { name: 'Gondar', note: 'Castles and culture', color: 'from-orange-900 to-orange-400', image: gondarImage },
 ]
 
 const faqs = [
@@ -86,17 +95,17 @@ export default function LandingPage() {
 
                     <div className="relative mx-auto w-full max-w-xl pb-5 pt-2 hidden sm:flex" aria-label="A preview of stays on Betoch">
                         <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                            <img src='../../src/assets/Images/Ethiopia-2.jpg' className='object-fill sm:h-48 h-36 rounded-2xl ' />
+                            <img src={ethiopiaTwoImage} alt="Homes in Ethiopia" className='h-36 rounded-2xl object-cover sm:h-48' />
                             <div className="relative h-36 rounded-2xl shadow-lg sm:h-48 overflow-clip">
-                                <img src='../../src/assets/Images/local-payments.jpg' className='object-fill h-full w-full' />
+                                <img src={paymentsImage} alt="Local payment methods" className='h-full w-full object-cover' />
                                 {/* <span className="absolute bottom-3 left-3 rounded-full bg-bg/80 px-2 py-1 text-[0.55rem] font-semibold text-text-2">A quiet city stay</span> */}
                             </div>
                             <div className="relative h-28 rounded-2xl shadow-lg sm:h-36">
-                                <img src='../../src/assets/Images/Ethiopia-1.jpg' className='object-fill rounded-2xl ' />
+                                <img src={ethiopiaOneImage} alt="Ethiopian landscape" className='rounded-2xl object-cover' />
                                 {/* <span className="absolute bottom-3 left-3 rounded-full bg-bg/80 px-2 py-1 text-[0.55rem] font-semibold text-text-2">Nature nearby</span> */}
                             </div>
                             <div className="relative h-28 rounded-2xl shadow-lg sm:h-36">
-                                <img src='../../src/assets/Images/verified homes.jpg' className='object-fill rounded-2xl' />
+                                <img src={verifiedHomesImage} alt="Verified homes" className='rounded-2xl object-cover' />
                                 <span className="absolute bottom-0 left-3 rounded-full bg-bg/80 px-2 py-1 text-[0.55rem] font-semibold text-text-2">Made for a getaway</span>
                             </div>
                         </div>

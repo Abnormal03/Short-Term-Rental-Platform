@@ -1,17 +1,24 @@
 import { useState } from 'react'
-import { ArrowRight, Compass, CreditCard, Headphones, House, MapPin, Search, ShieldCheck } from 'lucide-react'
-import { Link, useNavigate } from 'react-router-dom'
+import { ArrowRight, Compass, CreditCard, House, MapPin, Search, ShieldCheck } from 'lucide-react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import PageShell from '../components/layout/PageShell'
 import RetryButton from '../components/UI/RetryButton'
 import Skeleton from '../components/UI/Skeleton'
 import useFeaturedProperties from '../features/properties/hooks/useFeaturedProperties'
+import useUserStore from '../store/useUser'
+import addisImage from '../assets/Images/Addis Ababa.avif'
+import bahirDarImage from '../assets/Images/bahir dar.jpg'
+import lalibelaImage from '../assets/Images/lalibela.jpg'
+import hawassaImage from '../assets/Images/hawassa.jpg'
+import gondarImage from '../assets/Images/Gonder.jpg'
+import ethiopiaImage from '../assets/Images/Ethiopia.jpg'
 
 const CITIES = [
-    { name: 'Addis Ababa', gradient: 'from-emerald-900 to-emerald-500', image: "../../src/assets/Images/Addis Ababa.avif" },
-    { name: 'Bahir Dar', gradient: 'from-sky-900 to-sky-400', image: "../../src/assets/Images/bahir dar.jpg" },
-    { name: 'Lalibela', gradient: 'from-amber-900 to-amber-400', image: "../../src/assets/Images/lalibela.jpg" },
-    { name: 'Hawassa', gradient: 'from-lime-900 to-lime-500', image: "../../src/assets/Images/hawassa.jpg" },
-    { name: 'Gondar', gradient: 'from-orange-900 to-orange-400', image: "../../src/assets/Images/Gonder.jpg" },
+    { name: 'Addis Ababa', image: addisImage },
+    { name: 'Bahir Dar', image: bahirDarImage },
+    { name: 'Lalibela', image: lalibelaImage },
+    { name: 'Hawassa', image: hawassaImage },
+    { name: 'Gondar', image: gondarImage },
 ]
 
 const GUEST_BENEFITS = [
@@ -23,9 +30,14 @@ const GUEST_BENEFITS = [
 export default function ExplorePage() {
     const [city, setCity] = useState('')
     const navigate = useNavigate()
+    const role = useUserStore((state) => state.role)
+    const accountStatus = useUserStore((state) => state.accountStatus)
+    const location = useLocation()
+    const isAdminPreview = location.pathname === '/admin/site'
     const { data: properties = [], isLoading, isError, refetch, isFetching } = useFeaturedProperties(4)
 
     const goToProperties = (nextCity = city) => {
+        if (isAdminPreview) return
         const query = nextCity.trim() ? `?city=${encodeURIComponent(nextCity.trim())}` : ''
         navigate(`/properties${query}`)
     }
@@ -40,6 +52,7 @@ export default function ExplorePage() {
     return (
         <PageShell>
             <div className="w-full bg-bg-2 pt-16 text-text">
+                {role === 'GUEST' && accountStatus && accountStatus !== 'ACTIVE' && <div role="status" className="mx-auto max-w-7xl px-5 pt-4 sm:px-8 mb-5"><div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-950">{accountStatus === 'PENDING' ? 'Your account is awaiting admin approval. You can explore listings, but booking will be available after approval.' : accountStatus === 'SUSPENDED' ? 'Your account is suspended. Contact support if you need help.' : 'Your account was not approved. Contact support for more information.'}</div></div>}
                 <section className="bg-primary px-5 py-8 text-white sm:px-8 sm:py-10">
                     <div className="mx-auto grid max-w-7xl items-center gap-7 lg:grid-cols-[1fr_0.85fr]">
                         <div>
@@ -48,7 +61,7 @@ export default function ExplorePage() {
                             <p className="mt-3 max-w-xl text-sm leading-6 text-white/75">From Addis Ababa apartments to guest houses in Lalibela, find locally hosted homes and pay in birr with Betoch.</p>
                         </div>
                         <div className="relative hidden h-80 overflow-hidden rounded-2xl lg:block" aria-hidden="true">
-                            <img src='../../src/assets/Images/Ethiopia.jpg' className='object-center h-full w-full' />
+                            <img src={ethiopiaImage} alt="Ethiopian landscape" className='h-full w-full object-cover object-center' />
                             <div className="absolute bottom-3 left-3 rounded-full bg-bg/80 px-3 py-1 text-[0.6rem] font-semibold text-text-2">Explore Ethiopia</div>
                         </div>
                     </div>
@@ -71,9 +84,8 @@ export default function ExplorePage() {
                             <h2 id="city-title" className="mt-2 text-2xl font-bold tracking-tight text-text">Explore by city</h2>
                         </div>
                         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-                            {CITIES.map(({ name, gradient, image }) => <button type="button" key={name} onClick={() => goToProperties(name)} aria-label={`Explore stays in ${name}`} className="group relative h-32 overflow-hidden rounded-xl text-left shadow-sm transition hover:-translate-y-1 hover:shadow-lg sm:h-40">
-                                {/* Replace this gradient placeholder with the city image when it is ready. */}
-                                <img src={image} className='object-fill h-full w-full' />
+                            {CITIES.map(({ name, image }) => <button type="button" key={name} onClick={() => goToProperties(name)} aria-label={`Explore stays in ${name}`} className="group relative h-32 overflow-hidden rounded-xl text-left shadow-sm transition hover:-translate-y-1 hover:shadow-lg sm:h-40">
+                                <img src={image} alt={`${name}, Ethiopia`} className='h-full w-full object-cover' />
                                 <span className="absolute bottom-3 left-3 rounded-full bg-white/85 px-2 py-1 text-[0.6rem] font-semibold text-slate-800">{name}</span>
                             </button>)}
                         </div>
@@ -82,11 +94,11 @@ export default function ExplorePage() {
                     <section className="pb-10 sm:pb-14" aria-labelledby="featured-title">
                         <div className="flex flex-wrap items-end justify-between gap-4">
                             <div><p className="text-[0.6rem] font-bold uppercase tracking-[0.16em] text-primary">Popular, verified stays in Ethiopia</p><h2 id="featured-title" className="mt-2 text-2xl font-bold tracking-tight text-text">Featured stays</h2></div>
-                            <Link to="/properties" className="inline-flex items-center gap-2 rounded-lg bg-secondary px-4 py-2.5 text-xs font-bold text-on-secondary transition hover:brightness-105">See all listings <ArrowRight size={14} /></Link>
+                            <Link to="/properties" onClick={(event) => isAdminPreview && event.preventDefault()} className="inline-flex items-center gap-2 rounded-lg bg-secondary px-4 py-2.5 text-xs font-bold text-on-secondary transition hover:brightness-105">See all listings <ArrowRight size={14} /></Link>
                         </div>
                         {isError && <div className="mt-5 flex flex-wrap items-center gap-3 rounded-xl border border-border bg-bg p-5"><p role="alert" className="text-sm text-danger">Could not load featured stays.</p><RetryButton onRetry={refetch} isRetrying={isFetching} /></div>}
                         {!isLoading && !isError && properties.length === 0 && <div className="mt-5 rounded-xl border border-border bg-bg p-8 text-center"><House className="mx-auto text-primary" size={30} /><p className="mt-3 text-sm text-text-2">New stays are on their way. Browse all listings to see what is available.</p></div>}
-                        {!isLoading && !isError && properties.length > 0 && <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{properties.map((property) => <FeaturedStay key={property.property_id} property={property} />)}</div>}
+                        {!isLoading && !isError && properties.length > 0 && <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{properties.map((property) => <FeaturedStay key={property.property_id} property={property} preview={isAdminPreview} />)}</div>}
                     </section>
 
                     <section className="border-t border-border py-10 sm:py-14" aria-labelledby="steps-title">
@@ -110,7 +122,7 @@ export default function ExplorePage() {
                 </section>
 
                 <section className="mx-auto max-w-7xl px-5 py-8 sm:px-8 sm:py-10">
-                    <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-secondary/15 px-5 py-6 sm:px-8"><div><h2 className="font-bold text-text">Have a place to share?</h2><p className="mt-1 text-xs text-text-2">List your property and welcome guests to Ethiopia.</p></div><Link to="/sign-up" className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-xs font-semibold text-button-text">Become a host <ArrowRight size={14} /></Link></div>
+                    <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-secondary/15 px-5 py-6 sm:px-8"><div><h2 className="font-bold text-text">Have a place to share?</h2><p className="mt-1 text-xs text-text-2">List your property and welcome guests to Ethiopia.</p></div><Link to="/sign-up" onClick={(event) => isAdminPreview && event.preventDefault()} className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-xs font-semibold text-button-text">Become a host <ArrowRight size={14} /></Link></div>
                 </section>
             </div>
         </PageShell>
@@ -138,14 +150,15 @@ function ExploreCardSkeleton() {
     return <div className="overflow-hidden rounded-xl border border-border bg-bg"><Skeleton className="h-40 rounded-none" /><div className="space-y-3 p-3.5"><Skeleton className="h-4 w-4/5" /><Skeleton className="h-3 w-1/2" /><Skeleton className="h-4 w-full" /></div></div>
 }
 
-function FeaturedStay({ property }) {
+function FeaturedStay({ property, preview = false }) {
     const image = property.propertyImages?.[0]?.image_url
+    const stopPreviewNavigation = (event) => preview && event.preventDefault()
     return <article className="overflow-hidden rounded-xl border border-border bg-bg shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-        <Link to={`/properties/${property.property_id}`} aria-label={`View ${property.title}`} className="relative block h-40 overflow-hidden bg-bg-2">
+        <Link to={`/properties/${property.property_id}`} onClick={stopPreviewNavigation} aria-label={`View ${property.title}`} className="relative block h-40 overflow-hidden bg-bg-2">
             {image ? <img src={image} alt={property.title} className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center text-primary/50"><House size={32} /></div>}
             <span className="absolute left-2 top-2 rounded-full bg-secondary px-2 py-1 text-[0.55rem] font-bold text-on-secondary">Verified</span>
         </Link>
-        <div className="p-3.5"><Link to={`/properties/${property.property_id}`} className="line-clamp-1 text-sm font-bold text-text hover:text-primary">{property.title}</Link><p className="mt-1 line-clamp-1 text-[0.65rem] text-text-2">{property.city}, {property.country}</p><div className="mt-3 flex items-center justify-between gap-2 border-t border-border pt-3"><p className="text-xs font-bold text-text">ETB {Number(property.price_per_night).toLocaleString()} <span className="font-normal text-text-2">/ night</span></p><Link to={`/properties/${property.property_id}`} className="rounded-lg bg-primary/10 px-2.5 py-1.5 text-[0.65rem] font-semibold text-primary hover:bg-primary/20">Details</Link></div></div>
+        <div className="p-3.5"><Link to={`/properties/${property.property_id}`} onClick={stopPreviewNavigation} className="line-clamp-1 text-sm font-bold text-text hover:text-primary">{property.title}</Link><p className="mt-1 line-clamp-1 text-[0.65rem] text-text-2">{property.city}, {property.country}</p><div className="mt-3 flex items-center justify-between gap-2 border-t border-border pt-3"><p className="text-xs font-bold text-text">ETB {Number(property.price_per_night).toLocaleString()} <span className="font-normal text-text-2">/ night</span></p><Link to={`/properties/${property.property_id}`} onClick={stopPreviewNavigation} className="rounded-lg bg-primary/10 px-2.5 py-1.5 text-[0.65rem] font-semibold text-primary hover:bg-primary/20">Details</Link></div></div>
     </article>
 }
 

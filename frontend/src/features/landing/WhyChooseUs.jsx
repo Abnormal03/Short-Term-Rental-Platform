@@ -1,4 +1,3 @@
-import React from 'react'
 import { ShieldCheck, CreditCard, Languages } from 'lucide-react'
 
 const reasons = [

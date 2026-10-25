@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: 'Sora', sans-serif;
   --color-primary: var(--primary);
@@ -23,4 +25,9 @@ body {
   font-family: 'Sora', sans-serif;
   background: var(--bg-2);
   color: var(--text);
+}
+
+body.amharic-ui,
+body.amharic-ui * {
+  font-family: 'Noto Sans Ethiopic', Nyala, 'Abyssinica SIL', sans-serif !important;
 }

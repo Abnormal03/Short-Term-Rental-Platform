@@ -1,9 +1,11 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, '.', '')
+  return {
   plugins: [react(), tailwindcss()],
   server: {
     allowedHosts: [
@@ -11,10 +13,10 @@ export default defineConfig({
     ],
     proxy: {
       '/api': {
-        target: 'https://short-term-rental-platform.onrender.com',
-        // target: 'http://localhost:3000',
+        target: env.VITE_DEV_API_PROXY_TARGET || 'http://localhost:3000',
         changeOrigin: true,
       }
     }
+  }
   }
 })

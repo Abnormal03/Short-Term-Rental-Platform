@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, ArrowRight, House, MapPin, Search } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router-dom'
@@ -14,7 +14,6 @@ export default function ListingsPage() {
     const [searchParams, setSearchParams] = useSearchParams()
     const city = searchParams.get('city') || ''
     const [cityInput, setCityInput] = useState(city)
-    useEffect(() => setCityInput(city), [city])
     const page = Math.max(1, Number(searchParams.get('page')) || 1)
     const { data, isLoading, isError, refetch, isFetching } = useQuery({
         queryKey: ['properties', 'public-list', city, page],

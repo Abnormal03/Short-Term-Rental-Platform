@@ -21,4 +21,8 @@ export const bookingServices = {
 
     cancelBooking: (id) =>
         api.put(`/bookings/cancel/${id}`),
+    raiseDispute: (id, reason) =>
+        api.post(`/disputes/${id}`, { reason }),
+    getHostPropertyBookings: (propertyId, page = 1, limit = 20) =>
+        api.get(`/bookings/property/${propertyId}`, { params: { page, limit } }),
 }

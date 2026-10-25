@@ -1,12 +1,10 @@
-import { Copyright, ExternalLink, Globe, Mail, Phone } from 'lucide-react'
-import React, { useState } from 'react'
+import { Copyright, Globe, Mail, Phone } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import useUser from '../../store/useUser'
+import { useLocation } from 'react-router-dom'
 
 
 const GuestFooter = () => {
-    const [email, setEmail] = useState('')
-
     return (
         <footer className='bg-primary text-white'>
             {/* Main footer grid */}
@@ -48,24 +46,11 @@ const GuestFooter = () => {
                     <NavLink to='/contact' className='text-white/70 hover:text-white text-sm transition-colors'>Contact Us</NavLink>
                 </div>
 
-                {/* Newsletter column */}
                 <div className='flex flex-col gap-3'>
-                    <h2 className='font-bold text-lg text-white'>Newsletter</h2>
-                    <p className='text-white/70 text-sm leading-relaxed'>
-                        Subscribe for exclusive offers and travel tips in Ethiopia.
-                    </p>
-                    <div className='flex mt-1'>
-                        <input
-                            type='email'
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            placeholder='Email address'
-                            className='flex-1 bg-white/10 border border-white/20 rounded-l-lg px-3 py-2 text-sm text-white placeholder:text-white/40 outline-none focus:border-secondary transition-colors'
-                        />
-                        <button className='bg-secondary text-white font-semibold px-4 py-2 rounded-r-lg text-sm hover:brightness-110 transition-all'>
-                            Join
-                        </button>
-                    </div>
+                    <h2 className='font-bold text-lg text-white'>Discover</h2>
+                    <NavLink to='/explore' className='text-white/70 hover:text-white text-sm transition-colors'>Explore stays</NavLink>
+                    <NavLink to='/properties' className='text-white/70 hover:text-white text-sm transition-colors'>Browse properties</NavLink>
+                    <NavLink to='/about' className='text-white/70 hover:text-white text-sm transition-colors'>About Betoch</NavLink>
                 </div>
             </div>
 
@@ -81,16 +66,16 @@ const GuestFooter = () => {
 
 const HostFooter = () => {
     return (
-        <footer className='mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-border bg-bg px-4 py-4'>
+        <footer className='mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-border/60 bg-transparent px-4 py-3'>
             <div className='sm:hidden'>
                 <h1 className='text-primary text-2xl font-bold text-shadow-lg'>Betoch</h1>
                 <p className='flex gap-1 text-sm text-primary'><Copyright /> 2026 BETOCH RENTALS ETHIOPIA.</p>
             </div>
             <div></div>
             <div className='flex flex-wrap gap-4'>
-                <NavLink to={'/privacy'} className={"underline sm:decoration-0 text-secondary"} >privacy</NavLink>
-                <NavLink to={'/terms'} className={"underline sm:decoration-0 text-secondary"} >terms and conditions</NavLink>
-                <NavLink to={'/guarantee'} className={"underline sm:decoration-0 text-secondary"} >host guarantee</NavLink>
+                <NavLink to={'/privacy'} className="text-[9px] text-text-2 underline underline-offset-2 hover:text-primary">Privacy</NavLink>
+                <NavLink to={'/terms'} className="text-[9px] text-text-2 underline underline-offset-2 hover:text-primary">Terms and conditions</NavLink>
+                <NavLink to={'/guarantee'} className="text-[9px] text-text-2 underline underline-offset-2 hover:text-primary">Host guarantee</NavLink>
             </div>
         </footer>
     )
@@ -99,8 +84,15 @@ const HostFooter = () => {
 const Footer = () => {
 
     const { role } = useUser();
+    const location = useLocation()
 
     const ishost = role === "HOST";
+    if (role === 'ADMIN' && location.pathname === '/admin/site') {
+        return <footer className="flex items-center justify-between gap-3 border-t border-border bg-bg px-5 py-3 text-[10px] text-text-2 sm:px-7"><span>© {new Date().getFullYear()} Betoch Rentals Ethiopia</span><NavLink to="/admin" className="font-semibold text-primary hover:underline">Back to admin</NavLink></footer>
+    }
+    if (role === 'ADMIN' && location.pathname !== '/admin/site') {
+        return <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-border bg-bg px-5 py-3 text-[10px] text-text-2 sm:px-7"><span>© {new Date().getFullYear()} Betoch Rentals Ethiopia · Admin console</span><span className="flex gap-3"><NavLink to="/privacy" className="hover:underline">Privacy</NavLink><NavLink to="/terms" className="hover:underline">Terms</NavLink><NavLink to="/contact" className="hover:underline">Support</NavLink></span></footer>
+    }
     return (
         ishost ? <HostFooter /> : <GuestFooter />
     )

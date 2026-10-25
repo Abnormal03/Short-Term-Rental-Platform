@@ -49,13 +49,6 @@ export default function CompletedBookingCard({ booking }) {
                         Booking details
                     </Button>
                     <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => navigate(`/bookings/${booking.id}/review`)}
-                    >
-                        Write a Review
-                    </Button>
-                    <Button
                         variant="outline"
                         size="sm"
                         onClick={() => navigate(`/properties/${booking.property_id}`)}

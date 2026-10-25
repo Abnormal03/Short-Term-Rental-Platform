@@ -1,16 +1,27 @@
-# React + Vite
+# Betoch frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React 19, Vite, Tailwind CSS, Clerk authentication, and TanStack Query frontend for Betoch Rentals.
 
-Currently, two official plugins are available:
+## Local setup
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+1. Install Node.js 20.19+ or 22.12+ and npm.
+2. Run `npm install` in this directory.
+3. Copy `.env.example` to `.env.local` and set the Clerk publishable key. The local API proxy targets `http://localhost:3000`; set `VITE_DEV_API_PROXY_TARGET` to change it. `VITE_API_BASE_URL` defaults to `/api/v1` and is usually left at that value locally.
+4. Start the backend in a separate terminal, then run `npm run dev` here. The development site is served by Vite, normally at `http://localhost:5173`.
 
-## React Compiler
+For a deployed frontend, set `VITE_CLERK_PUBLISHABLE_KEY`, `VITE_API_BASE_URL` (backend origin plus `/api/v1`), `VITE_CLOUDINARY_CLOUD_NAME`, and `VITE_CLOUDINARY_UPLOAD_PRESET` in the hosting provider. Vite embeds these values during build, so configure them before building. These values are public client configuration; never put Clerk secret keys or Chapa credentials in the frontend environment.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Scripts
 
-## Expanding the ESLint configuration
+- `npm run dev` starts the Vite development server.
+- `npm run build` creates the production bundle in `dist`.
+- `npm run preview` serves a local preview of the production bundle.
+- `npm run lint` runs ESLint.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Configure Clerk's allowed origins and redirect URLs for the deployed frontend. Configure the frontend host to serve `index.html` for client-side routes such as `/properties/:id` and `/admin`.
+
+## Main flows
+
+- Guests browse `/explore` and `/properties`, inspect property details, then authenticate to check out and pay.
+- Hosts manage listings from `/overview` and `/properties`.
+- Administrators review listings, host verification, and disputes under `/admin`.

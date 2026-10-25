@@ -6,6 +6,7 @@ import "./App.css"
 import { useAxiosAuth } from './hooks/useAxiosHook'
 import AppRoutes from './routes/AppRoutes'
 import AuthSync from './components/auth/AuthSync'
+import LanguageLayer from './localization/LanguageLayer'
 
 function App() {
   useAxiosAuth();
@@ -13,6 +14,7 @@ function App() {
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
         <AuthSync />
+        <LanguageLayer />
         <AppRoutes />
       </QueryClientProvider>
     </BrowserRouter>

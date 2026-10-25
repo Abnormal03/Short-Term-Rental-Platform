@@ -12,7 +12,7 @@ import Skeleton from '../components/UI/Skeleton'
 import { formatDate } from '../lib/utils'
 import { bookingServices } from '../features/booking/services/bookingServices'
 
-const tabs = ['Upcoming', 'Completed', 'Cancelled']
+const tabs = ['Upcoming', 'Disputed', 'Completed', 'Cancelled']
 
 export default function MyBookingsPage() {
     const [activeTab, setActiveTab] = useState('Upcoming')
@@ -39,9 +39,10 @@ export default function MyBookingsPage() {
     }
 
     const upcoming = bookings.filter((booking) => ['CONFIRMED', 'PENDING'].includes(booking.booking_status))
+    const disputed = bookings.filter((booking) => booking.booking_status === 'DISPUTED')
     const completed = bookings.filter((booking) => booking.booking_status === 'COMPLETED')
     const cancelled = bookings.filter((booking) => ['CANCELLED', 'REFUNDED', 'REFUNDING'].includes(booking.booking_status))
-    const bookingGroups = { Upcoming: upcoming, Completed: completed, Cancelled: cancelled }
+    const bookingGroups = { Upcoming: upcoming, Disputed: disputed, Completed: completed, Cancelled: cancelled }
     const activeBookings = bookingGroups[activeTab]
     const selectedBooking = activeBookings.find((booking) => booking.booking_id === selectedBookingId) || activeBookings[0]
 

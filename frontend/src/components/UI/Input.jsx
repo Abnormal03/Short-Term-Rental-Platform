@@ -1,5 +1,3 @@
-import React from 'react'
-
 const Input = ({ placeholder = "some text", type = "text", size = "sm", className, value, ...props }) => {
     const sizes = {
         sm: 'w-50 h-10 px-3',

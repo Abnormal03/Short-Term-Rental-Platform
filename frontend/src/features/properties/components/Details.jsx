@@ -1,62 +1,56 @@
-import { useState, useEffect } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import PageShell from '../../../components/layout/PageShell'
 import usePropertyDetails from '../hooks/usePropertyDetails'
 import PropertyDetailsSkeleton from './PropertyDetailsSkeleton'
 import { Badge } from '../../../components/UI/Badge'
 import Button from '../../../components/UI/Botton'
-import { MapPin, Star, Verified, LayoutGrid, Users } from 'lucide-react'
+import { MapPin, Verified, LayoutGrid, Users } from 'lucide-react'
 import Input from '../../../components/UI/Input'
 import Contact from './Contact'
 import RetryButton from '../../../components/UI/RetryButton'
 import PropertyImageGallery from './PropertyImageGallery'
+import useUserStore from '../../../store/useUser'
 
 const Details = () => {
     const { id } = useParams();
     const navigate = useNavigate()
     const { data: property, isLoading, error, refetch, isFetching } = usePropertyDetails(id);
-    const [nights, setNights] = useState(0);
+    const isHostPreview = useUserStore((state) => state.role === 'HOST')
     const [guests, setGuests] = useState(2);
 
     const [checkIn, setCheckIn] = useState('');
     const [checkOut, setCheckOut] = useState('');
 
-    const [internalError, setInternalError] = useState(null);
-    const [isAllSet, setIsAllSet] = useState(false);
-
     const [showUserInfo, setShowUserInfo] = useState(false);
 
-
-    useEffect(() => {
-        if (!property?.property_id) return
-        const today = toDateInput(new Date())
-        const minimumStay = Math.max(1, Number(property.min_stay_duration) || 1)
-        setCheckIn(today)
-        setCheckOut(addDaysToDateInput(today, minimumStay))
-    }, [property?.property_id])
-
-    useEffect(() => {
-        if (!checkIn || !checkOut) {
-            setNights(0)
-            setIsAllSet(false)
-            return
-        }
-
-        const stayLength = daysBetweenDateInputs(checkIn, checkOut)
-        const minimumStay = Math.max(1, Number(property?.min_stay_duration) || 1)
+    const today = toDateInput(new Date())
+    const defaultAvailableFrom = property?.availabilities?.available_from ? toDateInput(new Date(property.availabilities.available_from)) : today
+    const defaultCheckIn = defaultAvailableFrom > today ? defaultAvailableFrom : today
+    const baseMinimumStay = Math.max(1, Number(property?.min_stay_duration) || 1)
+    const selectedCheckIn = checkIn || defaultCheckIn
+    const selectedCheckInOverride = property?.availabilityOverrides?.find((item) => toDateInput(new Date(item.date)) === selectedCheckIn)
+    const minimumStay = Math.max(1, Number(selectedCheckInOverride?.min_stay_duration) || baseMinimumStay)
+    const selectedCheckOut = checkOut || (property ? addDaysToDateInput(defaultCheckIn, minimumStay) : '')
+    const nights = selectedCheckIn && selectedCheckOut ? Math.max(0, daysBetweenDateInputs(selectedCheckIn, selectedCheckOut)) : 0
+    const stayPrice = getStayPrice(property, selectedCheckIn, selectedCheckOut)
+    const { internalError, isAllSet } = useMemo(() => {
+        if (!selectedCheckIn || !selectedCheckOut) return { internalError: null, isAllSet: false }
+        const stayLength = daysBetweenDateInputs(selectedCheckIn, selectedCheckOut)
         const maximumStay = Number(property?.max_stay_duration) || 30
-        setNights(Math.max(0, stayLength))
-
+        const availableFrom = property?.availabilities?.available_from ? toDateInput(new Date(property.availabilities.available_from)) : today
+        const availableTo = property?.availabilities?.available_to ? toDateInput(new Date(property.availabilities.available_to)) : null
+        const overrides = new Map((property?.availabilityOverrides || []).map((item) => [toDateInput(new Date(item.date)), item]))
         let validationMessage = null
-        if (checkIn < toDateInput(new Date())) validationMessage = "Check-in can't be in the past."
+        if (selectedCheckIn < today) validationMessage = "Check-in can't be in the past."
+        else if (selectedCheckIn < availableFrom || (availableTo && selectedCheckOut > availableTo)) validationMessage = 'These dates are outside the property’s availability window.'
         else if (stayLength <= 0) validationMessage = 'Check-out must be after check-in.'
         else if (guests < 1) validationMessage = 'At least one guest is required.'
         else if (stayLength < minimumStay) validationMessage = `This property requires a minimum stay of ${minimumStay} nights.`
         else if (stayLength > maximumStay) validationMessage = `This property allows a maximum stay of ${maximumStay} nights.`
-
-        setInternalError(validationMessage)
-        setIsAllSet(!validationMessage)
-    }, [checkIn, checkOut, guests, property?.min_stay_duration, property?.max_stay_duration])
+        else if (hasUnavailableDate(selectedCheckIn, selectedCheckOut, overrides, property?.bookings || [])) validationMessage = 'One or more selected dates are no longer available.'
+        return { internalError: validationMessage, isAllSet: !validationMessage }
+    }, [selectedCheckIn, selectedCheckOut, guests, property?.max_stay_duration, property?.availabilities?.available_from, property?.availabilities?.available_to, property?.availabilityOverrides, property?.bookings, today, minimumStay])
 
     if (isLoading) {
         return <PropertyDetailsSkeleton />
@@ -73,12 +67,12 @@ const Details = () => {
     }
 
     const propertyImages = property?.propertyImages ?? [];
-    const today = toDateInput(new Date())
-    const minimumStay = Math.max(1, Number(property.min_stay_duration) || 1)
+    const availableFrom = property.availabilities?.available_from ? toDateInput(new Date(property.availabilities.available_from)) : today
+    const availableTo = property.availabilities?.available_to ? toDateInput(new Date(property.availabilities.available_to)) : undefined
     return (
         <PageShell>
             <Contact showUserInfo={showUserInfo} setShowUserInfo={setShowUserInfo} property={property} />
-            <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-8 flex flex-col">
+            <div className={`w-full ${isHostPreview ? 'max-w-none' : 'mx-auto max-w-7xl'} px-4 pt-20 pb-8 flex flex-col sm:px-6 lg:px-8`}>
 
                 <nav aria-label="Breadcrumb" className="mb-4 text-xs text-text-2">
                     <Link to="/explore" className="hover:text-primary">Explore</Link>
@@ -109,9 +103,6 @@ const Details = () => {
                                     <MapPin className="size-5 text-primary" />
                                     <span>{property.city}, {property.country}</span>
                                 </div>
-                                {/* <div className="flex items-center gap-1 font-bold text-text">
-                                    <Star className="size-5 fill-amber-500 text-amber-500" /> 4.9
-                                </div> */}
                             </div>
                         </div>
 
@@ -161,14 +152,12 @@ const Details = () => {
                         <section className="border-t border-border pt-6">
                             <h2 className="mb-3 text-xl font-bold text-text">Where you’ll be</h2>
                             <p className="text-sm text-text-2">{property.city}, {property.country}</p>
-                            <div className="mt-3 flex h-36 items-end rounded-2xl bg-linear-to-br from-primary/15 via-bg-2 to-secondary/25 p-4">
-                                <span className="rounded-full bg-bg/90 px-3 py-1.5 text-xs font-semibold text-text-2"><MapPin className="mr-1 inline size-3.5 text-primary" />Approximate area</span>
-                            </div>
+                            <div className="mt-3 flex min-h-24 items-center gap-3 rounded-2xl border border-border bg-bg-2 p-4"><MapPin className="size-5 shrink-0 text-primary" /><div><p className="font-semibold text-text">{property.city}, {property.country}</p><p className="mt-1 text-xs text-text-2">The host will share exact directions after your booking is confirmed.</p></div></div>
                         </section>
 
                         <section className="border-t border-border pt-6">
                             <h2 className="mb-3 text-xl font-bold text-text">Reviews</h2>
-                            <p className="rounded-xl border border-border bg-bg px-4 py-6 text-center text-sm text-text-2">Guests can share a review after their stay.</p>
+                            <p className="rounded-xl border border-border bg-bg px-4 py-6 text-center text-sm text-text-2">Guest reviews are not available for this listing yet.</p>
                         </section>
 
                     </div>
@@ -179,15 +168,13 @@ const Details = () => {
 
                             <div className="flex justify-between items-center mb-6">
                                 <h2 className="text-2xl font-bold text-text">ETB {property.price_per_night?.toLocaleString()} <span className="text-sm text-text-2 font-normal">/ night</span></h2>
-                                <div className="flex items-center gap-1 font-bold text-text">
-                                    <Star className="size-4 fill-amber-500 text-amber-500" />
-                                </div>
+                                <span className="text-xs text-text-2">Verified stay</span>
                             </div>
 
                             {/* Date & Guests Selection */}
                             <div className="border border-border rounded-xl mb-6 overflow-hidden">
                                 <div className="flex border-b border-border">
-                                    <div className="w-1/2 p-3 border-r border-border cursor-pointer hover:bg-neutral">
+                                    <div className={`w-1/2 p-3 border-r border-border ${isHostPreview ? 'opacity-60' : 'cursor-pointer hover:bg-neutral'}`}>
                                         <label className="block text-[10px] font-bold text-text uppercase mb-1">Check-in</label>
                                         <input type="date" onChange={(e) => {
                                             const nextCheckIn = e.target.value
@@ -195,11 +182,11 @@ const Details = () => {
                                             if (nextCheckIn && checkOut && daysBetweenDateInputs(nextCheckIn, checkOut) < minimumStay) {
                                                 setCheckOut(addDaysToDateInput(nextCheckIn, minimumStay))
                                             }
-                                        }} value={checkIn} min={today} className="w-full outline-none text-sm bg-transparent text-text cursor-pointer" />
+                                        }} value={selectedCheckIn} min={availableFrom} max={availableTo} disabled={isHostPreview} className="w-full outline-none text-sm bg-transparent text-text cursor-pointer disabled:cursor-not-allowed" />
                                     </div>
-                                    <div className="w-1/2 p-3 cursor-pointer hover:bg-neutral">
+                                    <div className={`w-1/2 p-3 ${isHostPreview ? 'opacity-60' : 'cursor-pointer hover:bg-neutral'}`}>
                                         <label className="block text-[10px] font-bold text-text uppercase mb-1">Check-out</label>
-                                        <input type="date" onChange={(e) => setCheckOut(e.target.value)} value={checkOut} min={checkIn ? addDaysToDateInput(checkIn, minimumStay) : undefined} className="w-full outline-none text-sm bg-transparent text-text cursor-pointer" />
+                                        <input type="date" onChange={(e) => setCheckOut(e.target.value)} value={selectedCheckOut} min={selectedCheckIn ? addDaysToDateInput(selectedCheckIn, minimumStay) : undefined} max={availableTo} disabled={isHostPreview} className="w-full outline-none text-sm bg-transparent text-text cursor-pointer disabled:cursor-not-allowed" />
                                     </div>
                                 </div>
                                 <div className="p-3 flex justify-between items-center">
@@ -207,18 +194,21 @@ const Details = () => {
                                         <label className="block text-[10px] font-bold text-text uppercase mb-1">Guests</label>
                                         <div className='flex items-center w-full gap-2'>
                                             <Users className="size-4 shrink-0 text-text-2" aria-hidden="true" />
-                                            <Input aria-label="Number of guests" placeholder='Guests' onChange={(e) => { setGuests(Number(e.target.value)) }} value={guests} min={1} type='number' className={"bg-bg-2"} />
+                                            <Input aria-label="Number of guests" placeholder='Guests' onChange={(e) => { setGuests(Number(e.target.value)) }} value={guests} min={1} type='number' disabled={isHostPreview} className={`bg-bg-2 ${isHostPreview ? 'cursor-not-allowed opacity-60' : ''}`} />
                                         </div>
                                     </div>
                                 </div>
                             </div>
                             <div>
-                                <p className='font-light text-center text-red-500 text-sm'>{internalError}</p>
+                                {!isHostPreview && internalError && <p className='font-light text-center text-red-500 text-sm'>{internalError}</p>}
                             </div>
 
                             {/* <Button className="w-full mb-4 py-3 bg-primary hover:bg-primary/90 text-white rounded-xl">Book Now</Button> */}
-                            <Button className={"text-sm md:text-lg"} variant={`${isAllSet ? "primary" : "ghost"}`} size='wide' disabled={!isAllSet} onClick={() => {
+                            {isHostPreview && <p className="mb-2 rounded-lg bg-bg-2 px-3 py-2 text-center text-xs font-medium text-text-2">Booking is disabled in host preview.</p>}
+                            <Button className={"text-sm md:text-lg"} variant={`${isAllSet && !isHostPreview ? "primary" : "ghost"}`} size='wide' disabled={isHostPreview || !isAllSet} onClick={() => {
                                 const params = new URLSearchParams({ checkIn, checkOut, guests: String(guests) })
+                                params.set('checkIn', selectedCheckIn)
+                                params.set('checkOut', selectedCheckOut)
                                 navigate(`/properties/${id}/checkout?${params.toString()}`)
                             }}>Book Now</Button>
 
@@ -226,8 +216,8 @@ const Details = () => {
 
                             <div className="space-y-4 text-text-2 mb-6 text-sm">
                                 <div className="flex justify-between">
-                                    <span className="underline">ETB {property.price_per_night?.toLocaleString()} x {!nights ? "---" : nights + " nights"} </span>
-                                    <span>{!nights ? "---" : "ETB " + (property.price_per_night * nights)?.toLocaleString()}</span>
+                                    <span className="underline">Nightly rate x {!nights ? "---" : nights + " nights"} </span>
+                                    <span>{!nights ? "---" : "ETB " + stayPrice.toLocaleString()}</span>
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="underline">Service fee</span>
@@ -243,7 +233,7 @@ const Details = () => {
 
                             <div className="flex justify-between font-bold text-lg mb-8 text-text">
                                 <span>Total</span>
-                                <span className="text-primary">{!nights ? "---" : "ETB " + (property.price_per_night * nights + 500 + 800)?.toLocaleString()}</span>
+                                <span className="text-primary">{!nights ? "---" : "ETB " + (stayPrice + 500 + 800).toLocaleString()}</span>
                             </div>
 
                             {/* Secure Local Payments */}
@@ -283,6 +273,27 @@ function daysBetweenDateInputs(start, end) {
     const [startYear, startMonth, startDay] = start.split('-').map(Number)
     const [endYear, endMonth, endDay] = end.split('-').map(Number)
     return (Date.UTC(endYear, endMonth - 1, endDay) - Date.UTC(startYear, startMonth - 1, startDay)) / 86_400_000
+}
+
+function getStayPrice(property, start, end) {
+    if (!property || !start || !end) return 0
+    const overrides = new Map((property.availabilityOverrides || []).map((item) => [toDateInput(new Date(item.date)), item]))
+    let total = 0
+    for (let date = start; date < end; date = addDaysToDateInput(date, 1)) {
+        total += Number(overrides.get(date)?.price_per_night ?? property.price_per_night ?? 0)
+    }
+    return total
+}
+
+function hasUnavailableDate(start, end, overrides, bookings) {
+    for (let date = start; date < end; date = addDaysToDateInput(date, 1)) {
+        if (overrides.get(date)?.is_available === false) return true
+    }
+    return bookings.some((booking) => {
+        const bookingStart = toDateInput(new Date(booking.check_in_date))
+        const bookingEnd = toDateInput(new Date(booking.check_out_date))
+        return start < bookingEnd && end > bookingStart
+    })
 }
 
 function getInitials(name = '') {

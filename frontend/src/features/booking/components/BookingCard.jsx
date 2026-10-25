@@ -2,7 +2,7 @@ import { Check, Circle, MapPin } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { formatDate } from '../../../lib/utils'
 
-const BOOKING_STEPS = ['Booked', 'Paid', 'Check-in', 'Stay', 'Review']
+const BOOKING_STEPS = ['Booked', 'Paid', 'Check-in', 'Stay', 'Complete']
 
 export default function BookingCard({ booking, selected = false, onManage, onCancel, cancelling = false }) {
     const now = new Date()

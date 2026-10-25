@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
 import { useUser } from '@clerk/clerk-react'
-import { ArrowLeft, CalendarDays, Check, Circle, Download, Headphones, MapPin, MessageCircle, ShieldCheck, XCircle } from 'lucide-react'
+import { ArrowLeft, Check, Circle, Download, Headphones, MapPin, MessageCircle, ShieldCheck, XCircle } from 'lucide-react'
 import PageShell from '../components/layout/PageShell'
 import Skeleton from '../components/UI/Skeleton'
 import RetryButton from '../components/UI/RetryButton'
@@ -13,7 +13,7 @@ import { formatDate } from '../lib/utils'
 import { getPaymentRetryDetails } from '../features/booking/services/paymentRetryDetails'
 import useUserStore from '../store/useUser'
 
-const steps = ['Booked', 'Paid', 'Check-in', 'Stay', 'Review']
+const steps = ['Booked', 'Paid', 'Check-in', 'Stay', 'Complete']
 
 export default function BookingDetailsPage() {
     const { bookingId } = useParams()
@@ -24,6 +24,8 @@ export default function BookingDetailsPage() {
     const [showContact, setShowContact] = useState(false)
     const [cancelError, setCancelError] = useState('')
     const [retryError, setRetryError] = useState('')
+    const [disputeReason, setDisputeReason] = useState('')
+    const [showDisputeForm, setShowDisputeForm] = useState(false)
     const retryPaymentMutation = useMutation({
         mutationFn: () => bookingServices.retryBookingPayment(bookingId, getPaymentRetryDetails(booking, user, profilePhone)),
         onSuccess: (response) => {
@@ -50,6 +52,16 @@ export default function BookingDetailsPage() {
             ])
         },
         onError: (error) => setCancelError(error?.response?.data?.message || 'Could not cancel this booking. Please try again.'),
+    })
+    const disputeMutation = useMutation({
+        mutationFn: () => bookingServices.raiseDispute(bookingId, disputeReason.trim()),
+        onSuccess: async () => {
+            setShowDisputeForm(false)
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: ['my-booking', bookingId] }),
+                queryClient.invalidateQueries({ queryKey: ['my-bookings'] }),
+            ])
+        },
     })
 
     const bookingDates = useMemo(() => booking ? getBookingDates(booking.check_in_date, booking.check_out_date) : null, [booking])
@@ -166,7 +178,14 @@ export default function BookingDetailsPage() {
                         <h2 className="font-bold text-text">Manage booking</h2>
                         <div className="mt-3 space-y-2">
                             <button type="button" onClick={() => setShowContact(true)} className="flex w-full items-center justify-center gap-2 rounded-lg border border-border px-3 py-2.5 text-xs font-semibold text-text transition hover:border-primary hover:text-primary"><MessageCircle size={14} />Message host</button>
-                            <button type="button" onClick={() => setShowContact(true)} className="block w-full rounded-lg border border-border px-3 py-2.5 text-center text-xs font-semibold text-text transition hover:border-primary hover:text-primary">Request a date change</button>
+                            <button type="button" onClick={() => setShowContact(true)} className="block w-full rounded-lg border border-border px-3 py-2.5 text-center text-xs font-semibold text-text transition hover:border-primary hover:text-primary">Ask host about a change</button>
+                            {booking.booking_status === 'CONFIRMED' && <button type="button" onClick={() => setShowDisputeForm((open) => !open)} className="block w-full rounded-lg border border-border px-3 py-2.5 text-center text-xs font-semibold text-text transition hover:border-primary hover:text-primary">Report a booking issue</button>}
+                            {showDisputeForm && <form onSubmit={(event) => { event.preventDefault(); disputeMutation.mutate() }} className="grid gap-2 rounded-lg border border-border bg-bg-2 p-3">
+                                <label htmlFor="dispute-reason" className="text-xs font-semibold text-text">What happened?</label>
+                                <textarea id="dispute-reason" required maxLength={1000} value={disputeReason} onChange={(event) => setDisputeReason(event.target.value)} rows={3} className="w-full rounded-lg border border-border bg-bg px-3 py-2 text-xs text-text" />
+                                <button type="submit" disabled={disputeMutation.isPending || !disputeReason.trim()} className="rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-button-text disabled:opacity-50">{disputeMutation.isPending ? 'Sending…' : 'Send to support'}</button>
+                                {disputeMutation.isError && <p role="alert" className="text-xs text-danger">{disputeMutation.error?.response?.data?.message || 'Could not report this issue. Please retry.'}</p>}
+                            </form>}
                             {canCancel && <button type="button" onClick={cancelBooking} disabled={cancelMutation.isPending} className="flex w-full items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-danger transition hover:bg-danger/5 disabled:opacity-60"><XCircle size={14} />{cancelMutation.isPending ? 'Cancelling…' : 'Cancel booking'}</button>}
                             {isCancelled && <p className="rounded-lg bg-bg-2 px-3 py-2 text-center text-xs text-text-2">This booking has been cancelled.</p>}
                             {cancelError && <p role="alert" className="text-center text-xs text-danger">{cancelError}</p>}

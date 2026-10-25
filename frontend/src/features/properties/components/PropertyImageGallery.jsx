@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, Images, X } from 'lucide-react'
 
 const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?q=80&w=2000&auto=format&fit=crop'
@@ -17,7 +17,7 @@ export default function PropertyImageGallery({ images = [], title }) {
         mobileTrack.current?.scrollTo({ left: nextIndex * mobileTrack.current.clientWidth, behavior: 'smooth' })
     }
 
-    const moveLightbox = (direction) => setLightboxIndex((index) => wrapIndex(index + direction, galleryImages.length))
+    const moveLightbox = useCallback((direction) => setLightboxIndex((index) => wrapIndex(index + direction, galleryImages.length)), [galleryImages.length])
 
     useEffect(() => {
         if (!isLightboxOpen) return undefined
@@ -33,7 +33,7 @@ export default function PropertyImageGallery({ images = [], title }) {
             document.body.style.overflow = previousOverflow
             window.removeEventListener('keydown', onKeyDown)
         }
-    }, [isLightboxOpen])
+    }, [isLightboxOpen, moveLightbox])
 
     const openAt = (index) => setLightboxIndex(index)
 

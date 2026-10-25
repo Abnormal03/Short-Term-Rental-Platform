@@ -7,11 +7,14 @@ export const profileServices = {
             role
         })
     },
-    getProfile: () =>
-        api.get('/users/profile'),
+    getProfile: (config) =>
+        api.get('/users/profile', config),
 
-    updateProfile: (data) =>
-        api.put('/users/profile/update', data),
+    updateProfile: (data, config) =>
+        api.put('/users/profile/update', data, config),
+
+    updateLanguage: (language, config) =>
+        api.put('/users/user/update-language', { language }, config),
 
     getMyTrips: () =>
         api.get('/bookings/my-bookings'),

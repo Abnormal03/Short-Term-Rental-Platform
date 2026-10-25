@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useUser } from '@clerk/clerk-react'
-import { Check, Circle, Clock3, Download, MapPin, MessageCircle, X } from 'lucide-react'
+import { Check, Circle, Clock3, Download, LockKeyhole, MapPin, MessageCircle, X } from 'lucide-react'
 import CheckoutShell from '../components/layout/CheckoutShell'
 import Skeleton from '../components/UI/Skeleton'
 import RetryButton from '../components/UI/RetryButton'
@@ -17,6 +17,23 @@ const stages = ['Review', 'Pay', 'Confirmation']
 const PAYMENT_CHECK_WINDOW_MS = 5 * 60 * 1000
 const PAYMENT_CHECK_INTERVAL_MS = 60 * 1000
 
+
+export function BookingSignInRequiredPage() {
+    const location = useLocation()
+    const returnTo = `${location.pathname}${location.search}`
+    const signInUrl = `/sign-in?redirect_url=${encodeURIComponent(returnTo)}`
+
+    return <CheckoutShell>
+        <main className="grid min-h-[65vh] place-items-center bg-bg-2 px-4 py-12 text-text">
+            <section className="w-full max-w-lg rounded-2xl border border-border bg-bg p-7 text-center shadow-sm sm:p-10">
+                <span className="mx-auto grid size-12 place-items-center rounded-full bg-primary/10 text-primary"><LockKeyhole size={23} /></span>
+                <h1 className="mt-4 text-2xl font-bold sm:text-3xl">Sign in to continue</h1>
+                <p className="mt-2 text-base leading-7 text-text-2">Your payment return is ready. Sign in with the account used for this booking to securely check its status.</p>
+                <Link to={signInUrl} className="mt-6 inline-flex rounded-lg bg-secondary px-5 py-3 text-sm font-bold text-on-secondary">Sign in and return to booking</Link>
+            </section>
+        </main>
+    </CheckoutShell>
+}
 export function BookingConfirmationPage() {
     const { bookingId } = useParams()
     const location = useLocation()
@@ -25,7 +42,8 @@ export function BookingConfirmationPage() {
     const { user } = useUser()
     const profilePhone = useUserStore((state) => state.phoneNumber)
     const [pollingStartedAt, setPollingStartedAt] = useState(() => Date.now())
-    const [timedOut, setTimedOut] = useState(false)
+    const [timedOutFor, setTimedOutFor] = useState(null)
+    const timedOut = timedOutFor === bookingId
     const [cancelError, setCancelError] = useState('')
     const confirmation = useQuery({
         queryKey: ['booking-payment-confirmation', bookingId],
@@ -35,11 +53,10 @@ export function BookingConfirmationPage() {
     })
 
     useEffect(() => {
-        setTimedOut(false)
         const remaining = Math.max(0, PAYMENT_CHECK_WINDOW_MS - (Date.now() - pollingStartedAt))
-        const timeout = window.setTimeout(() => setTimedOut(true), remaining)
+        const timeout = window.setTimeout(() => setTimedOutFor(bookingId), remaining)
         return () => window.clearTimeout(timeout)
-    }, [pollingStartedAt])
+    }, [bookingId, pollingStartedAt])
 
     useEffect(() => {
         const result = confirmation.data
@@ -89,10 +106,10 @@ export function BookingConfirmationPage() {
     const reference = confirmation.data?.booking?.payment?.transaction_reference
 
     return <CheckoutShell>
-        <div className="min-h-[calc(100vh-4rem)] bg-bg-2 px-4 pb-10 pt-4 text-text sm:px-6">
+        <div className="min-h-[calc(100vh-4rem)] bg-bg-2 px-4 pb-10 text-text sm:px-6">
             <div className="mx-auto max-w-6xl">
                 <CheckoutHeader stage="Confirmation" />
-                <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(17rem,0.8fr)]">
+                <div className="grid items-start gap-5 mt-10 lg:grid-cols-[minmax(0,1.4fr)_minmax(17rem,0.8fr)]">
                     <section className="rounded-2xl border border-border bg-bg p-6 shadow-sm sm:p-9">
                         {waitingTooLong ? <>
                             <span className="grid size-12 place-items-center rounded-full bg-secondary/15 text-secondary"><Clock3 size={24} /></span>
@@ -114,13 +131,13 @@ export function BookingConfirmationPage() {
                             </div>
                         </> : confirmation.isError ? <>
                             <span className="grid size-12 place-items-center rounded-full bg-danger/10 text-danger"><X size={25} /></span>
-                            <h1 className="mt-4 text-xl font-bold">We couldn’t verify your payment yet</h1>
-                            <p className="mt-2 text-sm leading-6 text-text-2">Your booking remains unchanged while we reconnect to the payment provider. Retry the check in a moment.</p>
+                            <h1 className="mt-4 text-2xl font-bold sm:text-3xl">We couldn’t verify your payment yet</h1>
+                            <p className="mt-2 text-base leading-7 text-text-2">Your booking remains unchanged while we reconnect to the payment provider. Retry the check in a moment.</p>
                             <RetryButton onRetry={confirmation.refetch} isRetrying={confirmation.isFetching} label="Check payment again" />
                         </> : <>
                             <span className="mx-auto block size-10 animate-spin rounded-full border-[3px] border-border border-t-secondary" />
-                            <h1 className="mt-4 text-xl font-bold">Verifying your payment…</h1>
-                            <p className="mt-2 text-sm leading-6 text-text-2">Welcome back. We’re verifying your payment and confirming your booking. This usually takes a few seconds.</p>
+                            <h1 className="mt-4 text-2xl font-bold sm:text-3xl">Verifying your payment…</h1>
+                            <p className="mt-2 text-base leading-7 text-text-2">Welcome back. We’re verifying your payment and confirming your booking. This usually takes a few seconds.</p>
                             <ol className="mx-auto mt-6 grid max-w-xs gap-3 text-left text-xs">
                                 <ProgressItem done label="Returned from the payment screen" />
                                 <ProgressItem active label="Verifying your payment" />
@@ -151,8 +168,6 @@ export function BookingPaymentResultPage() {
     const payment = booking.payment || {}
     const nights = getNights(booking.check_in_date, booking.check_out_date)
     const total = Number(booking.total_price || payment.amount || 0)
-    const nightlySubtotal = Number(property.price_per_night || 0) * nights
-    const fees = Math.max(0, total - nightlySubtotal)
     const isSuccess = result === 'success'
     const isCancelled = result === 'cancelled'
     const title = isSuccess ? 'Your stay is confirmed' : isCancelled ? 'You cancelled the payment' : 'Payment didn’t go through'
@@ -176,7 +191,7 @@ export function BookingPaymentResultPage() {
                     <header className="mx-auto mt-7 max-w-xl text-center">
                         <span className="mx-auto grid size-14 place-items-center rounded-full bg-primary/10 text-primary"><Check size={28} /></span>
                         <h1 className="mt-4 text-2xl font-bold sm:text-3xl">{title}</h1>
-                        <p className="mt-2 text-sm leading-6 text-text-2">{description}</p>
+                        <p className="mt-2 text-base leading-7 text-text-2">{description}</p>
                         <p className="mt-3 inline-flex rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">Booking ref {booking.booking_id}</p>
                     </header>
                     <section className="mx-auto mt-5 max-w-2xl rounded-2xl border border-border bg-bg p-5 shadow-sm">
@@ -204,7 +219,7 @@ export function BookingPaymentResultPage() {
                     <section className="rounded-2xl border border-border bg-bg p-6 shadow-sm sm:p-8">
                         <span className={`grid size-12 place-items-center rounded-full ${isCancelled ? 'bg-neutral text-text-2' : 'bg-danger/10 text-danger'}`}>{isCancelled ? <X size={23} /> : <X size={23} />}</span>
                         <h1 className="mt-4 text-xl font-bold sm:text-2xl">{title}</h1>
-                        <p className="mt-2 text-sm leading-6 text-text-2">{description}</p>
+                        <p className="mt-2 text-base leading-7 text-text-2">{description}</p>
                         {!isCancelled && <div className="mt-4 rounded-xl border border-danger/20 bg-danger/5 p-3 text-xs text-danger">Reason: {payment.payment_status === 'FAILED' ? 'The payment provider reported that the payment failed.' : 'The payment could not be verified as complete.'}</div>}
                         {!isCancelled && <ul className="mt-4 list-disc space-y-1 pl-5 text-xs leading-5 text-text-2"><li>Your bank or wallet may have declined the payment.</li><li>The payment may have timed out before approval.</li><li>Your connection may have been interrupted.</li></ul>}
                         <div className="mt-5 flex flex-wrap gap-2">
@@ -212,7 +227,7 @@ export function BookingPaymentResultPage() {
                             <Link to={differentPaymentUrl} className="rounded-lg border border-border px-4 py-2.5 text-xs font-semibold text-text">Choose a different method</Link>
                             <a href="mailto:hello@zemenrentals.com" className="px-2 py-2.5 text-sm font-semibold text-primary underline">Contact support</a>
                         </div>
-                        <p className="mt-4 text-[0.68rem] leading-5 text-text-2">If you were charged, contact support with payment reference {payment.transaction_reference || 'not available'}.</p>
+                        <p className="mt-4 text-xs leading-5 text-text-2">If you were charged, contact support with payment reference {payment.transaction_reference || 'not available'}.</p>
                         {isCancelled && <Link to="/explore" className="mt-3 inline-block text-xs font-semibold text-primary underline">Back to explore</Link>}
                     </section>
                     <PaymentBookingSummary booking={booking} />
@@ -224,7 +239,7 @@ export function BookingPaymentResultPage() {
 
 function CheckoutHeader({ stage, result }) {
     const current = ['failed', 'cancelled'].includes(result) ? 1 : result === 'success' || stage === 'Confirmation' ? 2 : 0
-    return <header className="relative left-1/2 flex w-screen max-w-[100vw] -translate-x-1/2 flex-wrap items-center justify-between gap-4 border-b border-border bg-bg px-4 pb-4 pt-2 sm:px-8">
+    return <header className="relative left-1/2 flex w-screen max-w-[100vw] -translate-x-1/2 flex-wrap items-center justify-between gap-4 border-b border-border bg-bg px-4 pb-4 pt-5 sm:px-8">
         <Link to="/" className="font-bold text-primary">Betoch</Link>
         <ol aria-label="Checkout progress" className="flex items-center gap-2 sm:gap-4">
             {stages.map((label, index) => {
@@ -252,18 +267,18 @@ function PaymentBookingSummary({ booking }) {
     const fees = Math.max(0, total - stayCost)
     const image = property.propertyImages?.[0]?.image_url
     return <aside className="rounded-2xl border border-border bg-bg p-4 shadow-sm">
-        <div className="flex gap-3"><div className="size-14 shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-primary/15 via-bg-2 to-secondary/25">{image && <img src={image} alt={property.title || 'Property'} className="h-full w-full object-cover" />}</div><div className="min-w-0"><h2 className="line-clamp-2 text-xs font-bold">{property.title || 'Property'}</h2><p className="text-[0.62rem] text-text-2">{property.city}, {property.country}</p></div></div>
-        <div className="mt-3 grid grid-cols-3 gap-2 border-y border-border py-3 text-[0.55rem]"><MiniFact label="Check-in" value={formatDate(booking.check_in_date)} /><MiniFact label="Check-out" value={formatDate(booking.check_out_date)} /><MiniFact label="Guests" value={String(booking.guest_count || 1)} /></div>
-        <div className="mt-3 space-y-2 text-[0.65rem]"><SummaryRow label={`ETB ${Number(property.price_per_night || 0).toLocaleString()} × ${nights} nights`} value={`ETB ${stayCost.toLocaleString()}`} />{fees >= 1300 ? <><SummaryRow label="Service fee" value="ETB 500" /><SummaryRow label="Cleaning fee" value="ETB 800" /></> : <SummaryRow label="Service and cleaning fees" value={`ETB ${fees.toLocaleString()}`} />}<div className="flex justify-between border-t border-border pt-2 font-bold"><span>Total</span><span className="text-primary">ETB {total.toLocaleString()}</span></div></div>
+        <div className="flex gap-3"><div className="size-14 shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-primary/15 via-bg-2 to-secondary/25">{image && <img src={image} alt={property.title || 'Property'} className="h-full w-full object-cover" />}</div><div className="min-w-0"><h2 className="line-clamp-2 text-sm font-bold">{property.title || 'Property'}</h2><p className="text-xs text-text-2">{property.city}, {property.country}</p></div></div>
+        <div className="mt-3 grid grid-cols-3 gap-2 border-y border-border py-3 text-xs"><MiniFact label="Check-in" value={formatDate(booking.check_in_date)} /><MiniFact label="Check-out" value={formatDate(booking.check_out_date)} /><MiniFact label="Guests" value={String(booking.guest_count || 1)} /></div>
+        <div className="mt-3 space-y-2 text-sm"><SummaryRow label={`ETB ${Number(property.price_per_night || 0).toLocaleString()} × ${nights} nights`} value={`ETB ${stayCost.toLocaleString()}`} />{fees >= 1300 ? <><SummaryRow label="Service fee" value="ETB 500" /><SummaryRow label="Cleaning fee" value="ETB 800" /></> : <SummaryRow label="Service and cleaning fees" value={`ETB ${fees.toLocaleString()}`} />}<div className="flex justify-between border-t border-border pt-2 font-bold"><span>Total</span><span className="text-primary">ETB {total.toLocaleString()}</span></div></div>
     </aside>
 }
 
 function MiniFact({ label, value }) { return <div><p className="font-bold uppercase text-text-2">{label}</p><p className="mt-1 font-semibold text-text">{value}</p></div> }
 function SummaryRow({ label, value }) { return <div className="flex justify-between gap-2 text-text-2"><span>{label}</span><span className="font-semibold text-text">{value}</span></div> }
-function ReceiptRow({ label, value, strong = false }) { return <div className={`flex justify-between gap-3 border-b border-border py-2.5 text-xs last:border-0 ${strong ? 'font-bold' : ''}`}><span className="text-text-2">{label}</span><span className="text-right text-text">{value}</span></div> }
+function ReceiptRow({ label, value, strong = false }) { return <div className={`flex justify-between gap-3 border-b border-border py-2.5 text-sm last:border-0 ${strong ? 'font-bold' : ''}`}><span className="text-text-2">{label}</span><span className="text-right text-text">{value}</span></div> }
 
 function NextAction({ icon, title, text, onClick, href, target, rel }) {
-    const content = <><span className="text-primary">{icon}</span><h3 className="mt-2 text-xs font-bold text-text">{title}</h3><p className="mt-1 text-[0.65rem] leading-4 text-text-2">{text}</p></>
+    const content = <><span className="text-primary">{icon}</span><h3 className="mt-2 text-sm font-bold text-text">{title}</h3><p className="mt-1 text-xs leading-4 text-text-2">{text}</p></>
     const className = 'h-full w-full rounded-xl border border-border bg-bg p-3 text-left transition hover:border-primary/50'
     return href
         ? <a href={href} target={target} rel={rel} className={className}>{content}</a>

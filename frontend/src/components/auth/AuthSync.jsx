@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useAuth, useUser } from '@clerk/clerk-react';
 import useUserStore from '../../store/useUser';
 import api from '../../lib/axios';
+import useLanguageStore from '../../store/useLanguageStore';
 
 const AuthSync = () => {
     const { isLoaded, isSignedIn, user: clerkUser } = useUser();
@@ -20,7 +21,8 @@ const AuthSync = () => {
                     });
                     const dbUser = response.data;
                     if (isCurrent) {
-                        setUser(clerkUser, dbUser?.role || 'GUEST', dbUser?.phoneNumber || null, dbUser?.profileComplete);
+                        setUser(clerkUser, dbUser?.role || 'GUEST', dbUser?.phoneNumber || null, dbUser?.profileComplete, dbUser?.accountStatus);
+                        useLanguageStore.getState().setLanguage(dbUser?.role === 'ADMIN' ? 'en' : dbUser?.language || 'en');
                     }
                 } catch (error) {
                     console.error("Failed to sync user with backend:", error.message);
@@ -28,6 +30,7 @@ const AuthSync = () => {
                 }
             } else if (isLoaded && !isSignedIn) {
                 clearUser();
+                useLanguageStore.getState().setLanguage('en');
             }
         };
 
