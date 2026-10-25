@@ -21,8 +21,11 @@ app.use(clerkMiddleware());
 // BUG FIX: cors() must be registered before express.json() so pre-flight OPTIONS
 // requests are handled before any body-parsing middleware runs.
 app.use(cors({
-    origin: (process.env.CORS_ORIGINS || 'http://localhost:5173,http://localhost:5174')
-        .split(',').map((origin) => origin.trim()).filter(Boolean),
+    origin: [...new Set([
+        ...(process.env.CORS_ORIGINS || 'http://localhost:5173,http://localhost:5174')
+            .split(',').map((origin) => origin.trim()).filter(Boolean),
+        'https://short-term-rental-platform.vercel.app',
+    ])],
     credentials: true,
 }));
 
