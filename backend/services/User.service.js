@@ -47,6 +47,11 @@ const getAllUsersFromDB = async (userId, page, limit) => {
 
 const verifyHost = async (hostId, verified) => {
     try {
+        const host = await prisma.user.findUnique({
+            where: { user_id: hostId },
+            select: { user_id: true, Role: true }
+        });
+        if (!host || host.Role !== 'HOST') return null;
         const user = await prisma.user.update({
             where: {
                 user_id: hostId
@@ -111,6 +116,9 @@ const userProfile = async (userId) => {
                 phone_number: true,
                 is_verified_host: true,
                 payment_preference: true,
+                booking_updates_enabled: true,
+                host_messages_enabled: true,
+                offers_enabled: true,
                 create_at: true,
                 languagePreference: { select: { language_code: true } }
             }
@@ -126,7 +134,14 @@ const userProfile = async (userId) => {
 const updateUser = async (userId, updateData) => {
     try {
         // Allowlist of fields that can be updated via this function
-        const allowedFields = ['name', 'phone_number'];
+        const allowedFields = [
+            'name',
+            'phone_number',
+            'payment_preference',
+            'booking_updates_enabled',
+            'host_messages_enabled',
+            'offers_enabled'
+        ];
         const sanitizedData = {};
         for (const field of allowedFields) {
             if (updateData[field] !== undefined) {
@@ -148,7 +163,7 @@ const updateUser = async (userId, updateData) => {
         return updatedUser;
     } catch (error) {
         console.error('Error updating user profile:', error.message);
-        throw new Error(error.message || 'Failed to update user profile');
+        throw error;
     }
 }
 

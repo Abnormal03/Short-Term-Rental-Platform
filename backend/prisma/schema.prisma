@@ -21,6 +21,9 @@ model User {
   phone_number       String?              @unique
   is_verified_host   Boolean              @default(false)
   payment_preference PaymentPreference    @default(TELEBIRR)
+  booking_updates_enabled Boolean          @default(true)
+  host_messages_enabled   Boolean          @default(true)
+  offers_enabled          Boolean          @default(false)
   create_at          DateTime             @default(now())
   updated_at         DateTime             @updatedAt
   properties         Property[]
@@ -33,6 +36,7 @@ enum PaymentPreference {
   TELEBIRR
   MPESA
   CBEBIRR
+  AWASH
 }
 
 enum Role {

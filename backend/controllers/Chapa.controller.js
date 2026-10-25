@@ -13,7 +13,9 @@ function isValidWebhookSignature(req, rawBody) {
     const received = [req.get('x-chapa-signature'), req.get('chapa-signature')].filter(Boolean);
     if (!received.length) return false;
 
-    const secrets = [process.env.CHAPA_WEBHOOK_SECRET, process.env.CHAPA_SECRET_KEY].filter(Boolean);
+    // Chapa's dashboard webhook secret is distinct from the API key. Accepting
+    // the API key here would make webhook authentication depend on key reuse.
+    const secrets = [process.env.CHAPA_WEBHOOK_SECRET].filter(Boolean);
     return secrets.some((secret) => {
         const payloadSignature = crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
         const secretSignature = crypto.createHmac('sha256', secret).update(secret).digest('hex');

@@ -2,7 +2,8 @@ const prisma = require('../config/db');
 
 const createUser = async (user) => {
     try {
-        const email = user.email_addresses?.[0]?.email_address;
+        const email = user.email_addresses?.find((address) => address.id === user.primary_email_address_id)?.email_address
+            || user.email_addresses?.find((address) => address.verification?.status === 'verified')?.email_address;
         if (!user.id || !email) throw new Error('Clerk user is missing an ID or email address.');
         const name = [user.first_name, user.last_name].filter(Boolean).join(' ') || 'Unknown';
 
@@ -12,6 +13,7 @@ const createUser = async (user) => {
             },
             update: {
                 name,
+                email,
                 phone_number: user.phone_numbers?.[0]?.phone_number,
             },
             create: {

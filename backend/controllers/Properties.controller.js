@@ -136,12 +136,15 @@ const updateProperty = async (req, res) => {
     try {
         const { userId } = getAuth(req);
         const { propertyId } = req.params;
-        const { title, description, city, country, price_per_night, min_stay_duration, max_stay_duration, property_images, amenities } = req.body;
+        const { title, description, city, country, price_per_night, min_stay_duration, max_stay_duration, property_images, amenities, availability } = req.body;
+        const availableFrom = new Date(availability?.available_from);
+        const availableTo = new Date(availability?.available_to);
 
         if (!title?.trim() || !description?.trim() || !city?.trim() || !country?.trim() ||
             !Number.isFinite(Number(price_per_night)) || Number(price_per_night) <= 0 ||
             !Number.isInteger(Number(min_stay_duration)) || !Number.isInteger(Number(max_stay_duration)) ||
             Number(min_stay_duration) < 1 || Number(max_stay_duration) < Number(min_stay_duration) ||
+            !Number.isFinite(availableFrom.getTime()) || !Number.isFinite(availableTo.getTime()) || availableFrom >= availableTo ||
             (property_images !== undefined && !Array.isArray(property_images)) ||
             (amenities !== undefined && !Array.isArray(amenities))) {
             return res.status(400).json({ success: false, message: 'Property details are invalid.' });
@@ -150,7 +153,7 @@ const updateProperty = async (req, res) => {
         const property = {
             title, description, city, country, price_per_night: Number(price_per_night),
             min_stay_duration: Number(min_stay_duration), max_stay_duration: Number(max_stay_duration),
-            property_images, amenities
+            property_images, amenities, availability
         };
 
         const updatedProperty = await propertyUpdate(propertyId, userId, property);

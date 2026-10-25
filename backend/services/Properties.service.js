@@ -344,6 +344,18 @@ const propertyUpdate = async (propertyId, clerkId, property) => {
                     propertyImages: {
                         deleteMany: {},
                         ...(imageData.length > 0 && { createMany: { data: imageData } })
+                    },
+                    availabilities: {
+                        upsert: {
+                            update: {
+                                available_from: new Date(property.availability.available_from),
+                                available_to: new Date(property.availability.available_to)
+                            },
+                            create: {
+                                available_from: new Date(property.availability.available_from),
+                                available_to: new Date(property.availability.available_to)
+                            }
+                        }
                     }
                 },
                 include: {

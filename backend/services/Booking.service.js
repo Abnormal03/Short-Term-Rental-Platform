@@ -41,7 +41,9 @@ const createBooking = async (booking, clerkId, propertyId) => {
                 throw new Error('Property availability has not been configured.');
             }
             const { available_from, available_to } = property.availabilities;
-            if (checkIn < new Date(available_from) || checkOut > new Date(available_to)) {
+            const dateKey = (date) => new Date(date).toISOString().slice(0, 10);
+            const todayKey = new Date().toISOString().slice(0, 10);
+            if (dateKey(checkIn) < todayKey || dateKey(checkIn) < dateKey(available_from) || dateKey(checkOut) > dateKey(available_to)) {
                 throw new Error('Property is not available for these dates.');
             }
 
@@ -107,7 +109,7 @@ const cancelBook = async (bookingId, clerkId, reason) => {
             if (!booking) throw new Error("Booking not found");
             if (booking.user.Clerk_id !== clerkId) throw new Error('You can only cancel your own booking.');
 
-            if (["CANCELLED", "COMPLETED"].includes(booking.booking_status)) {
+            if (!['PENDING', 'CONFIRMED'].includes(booking.booking_status)) {
                 throw new Error("Booking not cancellable");
             }
 
@@ -139,58 +141,96 @@ const cancelBook = async (bookingId, clerkId, reason) => {
         // refund in chapa if illigable...
         let refundDetail;
         if (isElligible && booking.payment?.payment_status === 'COMPLETED') {
-            refundDetail = await chapaRefund(booking.payment.transaction_reference);
-
-            if (!refundDetail.success) {
-                throw new Error('Unable to Refund Transaction.')
+            try {
+                refundDetail = await chapaRefund(booking.payment.transaction_reference);
+                if (!refundDetail?.success) throw new Error('Unable to refund transaction.');
+            } catch (refundError) {
+                await prisma.booking.updateMany({
+                    where: { booking_id: booking.booking_id, booking_status: 'REFUNDING' },
+                    data: { booking_status: booking.booking_status }
+                });
+                throw refundError;
             }
         }
 
-        const result = await prisma.$transaction(async (tx) => {
-            // create refund if elligable...
-            if (refundDetail?.success && booking.payment) {
-                await tx.payment.update({
-                    where: {
-                        payment_id: booking.payment.payment_id
-                    },
-                    data: {
-                        payment_status: "REFUNDED"
-                    }
-                })
-            }
+        let result;
+        try {
+            result = await prisma.$transaction(async (tx) => {
+                if (booking.payment?.payment_status === 'PENDING') {
+                    const paymentFailure = await tx.payment.updateMany({
+                        where: {
+                            payment_id: booking.payment.payment_id,
+                            payment_status: 'PENDING'
+                        },
+                        data: { payment_status: 'FAILED' }
+                    });
 
-            if (refundDetail?.success && booking.payment) {
-                await tx.refund.create({
-                    data: {
-                        payment_id: booking.payment.payment_id,
-                        reason: reason,
-                        refund_status: "COMPLETED",
-                        amount: booking.total_price,
-                        transaction_reference: refundDetail.tx_ref
-                    }
-                });
-            }
-
-            // cancel booking...
-            const cancelBooking = await tx.booking.update({
-                where: {
-                    booking_id: booking.booking_id
-                },
-                data: {
-                    booking_status: 'CANCELLED'
-                },
-                include: {
-                    payment: {
-                        include: {
-                            refund: true
+                    if (paymentFailure.count === 0) {
+                        const currentPayment = await tx.payment.findUnique({
+                            where: { payment_id: booking.payment.payment_id },
+                            select: { payment_status: true }
+                        });
+                        if (currentPayment?.payment_status !== 'FAILED') {
+                            throw new Error('Payment status changed while cancellation was processing. Refresh the booking and try again.');
                         }
                     }
                 }
-            })
+
+                // create refund if elligable...
+                if (refundDetail?.success && booking.payment) {
+                    await tx.payment.update({
+                        where: {
+                            payment_id: booking.payment.payment_id
+                        },
+                        data: {
+                            payment_status: "REFUNDED"
+                        }
+                    })
+                }
+
+                if (refundDetail?.success && booking.payment) {
+                    await tx.refund.create({
+                        data: {
+                            payment_id: booking.payment.payment_id,
+                            reason: reason,
+                            refund_status: "COMPLETED",
+                            amount: booking.total_price,
+                            transaction_reference: refundDetail.tx_ref
+                        }
+                    });
+                }
+
+                // cancel booking...
+                const cancelBooking = await tx.booking.update({
+                    where: {
+                        booking_id: booking.booking_id
+                    },
+                    data: {
+                        booking_status: 'CANCELLED'
+                    },
+                    include: {
+                        payment: {
+                            include: {
+                                refund: true
+                            }
+                        }
+                    }
+                })
 
 
-            return cancelBooking;
-        })
+                return cancelBooking;
+            });
+        } catch (error) {
+            // The booking was marked REFUNDING before provider calls. Restore it
+            // for a pending payment if its local cancellation cannot complete.
+            if (booking.payment?.payment_status === 'PENDING') {
+                await prisma.booking.updateMany({
+                    where: { booking_id: booking.booking_id, booking_status: 'REFUNDING' },
+                    data: { booking_status: booking.booking_status }
+                });
+            }
+            throw error;
+        }
 
         return result;
 
@@ -221,6 +261,12 @@ const propertyBookings = async (propertyId, clerkId, page, limit) => {
         }
         const bookings = await prisma.booking.findMany({
             where,
+            include: {
+                property: { select: { title: true, city: true, country: true } },
+                user: { select: { name: true, email: true, phone_number: true } },
+                payment: { select: { payment_method: true, payment_status: true } }
+            },
+            orderBy: { created_at: 'desc' },
             skip,
             take: limit
         })

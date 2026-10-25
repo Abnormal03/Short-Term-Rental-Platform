@@ -7,7 +7,11 @@ const raiseDispute = async (req, res) => {
         const { reason } = req.body;
         const { userId } = getAuth(req);
 
-        const dispute = await raiseDisputeService(bookingId, userId, reason);
+        if (typeof reason !== 'string' || !reason.trim() || reason.trim().length > 1000) {
+            return res.status(400).json({ success: false, message: 'Provide a short description of the booking issue.' });
+        }
+
+        const dispute = await raiseDisputeService(bookingId, userId, reason.trim());
         return res.status(201).json({ success: true, dispute });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });
@@ -19,6 +23,11 @@ const resolveDispute = async (req, res) => {
     try {
         const { disputeId } = req.params;
         const { resolution, action } = req.body;
+
+        if (!['APPROVE', 'REJECT'].includes(resolution) || !['CONFIRM', 'REFUND'].includes(action) ||
+            (resolution === 'REJECT' && action !== 'CONFIRM')) {
+            return res.status(400).json({ success: false, message: 'Choose a supported dispute resolution and action.' });
+        }
 
         const result = await resolveDisputeService(disputeId, resolution, action);
         return res.status(200).json({ success: true, dispute: result.dispute, action: result.action });

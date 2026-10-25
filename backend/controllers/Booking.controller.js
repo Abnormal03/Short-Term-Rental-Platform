@@ -7,9 +7,15 @@ const addBooking = async (req, res) => {
         const { propertyId } = req.params;
         const { userId } = getAuth(req);
         const { booking, paymentDetail } = req.body;
+        const checkIn = new Date(booking?.checkInDate);
+        const checkOut = new Date(booking?.checkOutDate);
+        const validPaymentMethods = ['telebirr', 'cbe', 'awash'];
 
         if (!booking || !booking.checkInDate || !booking.checkOutDate || !booking.paymentMethod ||
-            !paymentDetail?.email || !paymentDetail?.first_name || !paymentDetail?.phone_number) {
+            !paymentDetail?.email || !paymentDetail?.first_name || !paymentDetail?.phone_number ||
+            !Number.isFinite(checkIn.getTime()) || !Number.isFinite(checkOut.getTime()) || checkIn >= checkOut ||
+            !Number.isInteger(Number(booking.guests)) || Number(booking.guests) < 1 ||
+            !validPaymentMethods.includes(String(booking.paymentMethod).toLowerCase())) {
             return res.status(400).json({ success: false, message: 'Full information is required.' });
         }
 

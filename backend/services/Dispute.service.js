@@ -109,14 +109,29 @@ const resolveDisputeService = async (disputeId, resolution, action) => {
 
             //refund if refund the update booking status to refunded and update payment status to refunded as well...
             if (action === "REFUND") {
-                const tx_ref = updatedDispute.booking.payment.transaction_reference;
-                const refunded = await refund(tx_ref);
-
-                console.log("refunded: ", refunded)
+                const payment = updatedDispute.booking.payment;
+                if (!payment || payment.payment_status !== 'COMPLETED' || !payment.transaction_reference) {
+                    throw new Error('This booking does not have a completed payment to refund.');
+                }
+                const refunded = await refund(payment.transaction_reference);
 
                 if (!refunded || !refunded.success) {
                     throw new Error('Unable to process refund!');
                 }
+
+                await tx.payment.update({
+                    where: { payment_id: payment.payment_id },
+                    data: { payment_status: 'REFUNDED' }
+                });
+                await tx.refund.create({
+                    data: {
+                        payment_id: payment.payment_id,
+                        amount: payment.amount,
+                        reason: `Dispute resolution: ${dispute.reason}`,
+                        refund_status: 'COMPLETED',
+                        transaction_reference: refunded.tx_ref || null
+                    }
+                });
             }
 
             const updatedBooking = await tx.booking.update({
@@ -146,13 +161,15 @@ const getAllDisputesService = async (page, limit) => {
             throw new Error('Limit must be between 1 and 100');
         }
         const skip = (page - 1) * limit;
-        const disputes = await prisma.dispute.findMany({
+        const [disputes, count] = await prisma.$transaction([
+        prisma.dispute.findMany({
             where: {
                 status: 'OPEN'
             },
             include: {
                 booking: {
                     include: {
+                        payment: { select: { payment_method: true, payment_status: true } },
                         user: {
                             select: {
                                 name: true,
@@ -170,9 +187,11 @@ const getAllDisputesService = async (page, limit) => {
             },
             skip,
             take: limit
-        })
+        }),
+        prisma.dispute.count({ where: { status: 'OPEN' } })
+        ])
 
-        return disputes || [];
+        return { disputes: disputes || [], count };
     } catch (error) {
         console.error('Error fetching all disputes:', error.message);
         throw new Error(error.message);

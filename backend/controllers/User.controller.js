@@ -53,7 +53,7 @@ const verifyHost = async (req, res) => {
         const updatedUser = await getVerifiedHost(hostId, verified);
 
         if (!updatedUser) {
-            return res.status(404).json({ success: false, message: 'User not found.' });
+            return res.status(404).json({ success: false, message: 'Host account not found.' });
         }
         return res.status(200).json({ success: true, user: updatedUser });
     } catch (error) {
@@ -80,9 +80,16 @@ const updateUserProfile = async (req, res) => {
     try {
         const { userId } = getAuth(req);
         const updates = req.body;
-        const hasAllowedField = updates && ['name', 'phone_number'].some((field) => updates[field] !== undefined);
+        const hasAllowedField = updates && [
+            'name',
+            'phone_number',
+            'payment_preference',
+            'booking_updates_enabled',
+            'host_messages_enabled',
+            'offers_enabled'
+        ].some((field) => updates[field] !== undefined);
         if (!hasAllowedField) {
-            return res.status(400).json({ success: false, message: 'Provide a name or phone_number to update.' });
+            return res.status(400).json({ success: false, message: 'Provide at least one supported profile field to update.' });
         }
         if (updates.phone_number !== undefined && updates.phone_number !== null &&
             (typeof updates.phone_number !== 'string' || !/^\+?[0-9()\s-]{7,20}$/.test(updates.phone_number.trim()))) {
@@ -90,6 +97,13 @@ const updateUserProfile = async (req, res) => {
         }
         if (updates.name !== undefined && (typeof updates.name !== 'string' || !updates.name.trim())) {
             return res.status(400).json({ success: false, message: 'Name must not be empty.' });
+        }
+        if (updates.payment_preference !== undefined && !['TELEBIRR', 'CBEBIRR', 'AWASH', 'MPESA'].includes(updates.payment_preference)) {
+            return res.status(400).json({ success: false, message: 'Choose a supported payment preference.' });
+        }
+        const notificationFields = ['booking_updates_enabled', 'host_messages_enabled', 'offers_enabled'];
+        if (notificationFields.some((field) => updates[field] !== undefined && typeof updates[field] !== 'boolean')) {
+            return res.status(400).json({ success: false, message: 'Notification settings must be true or false.' });
         }
 
         const updatedUser = await updateUser(userId, updates);
